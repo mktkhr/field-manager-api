@@ -1,0 +1,99 @@
+name: field-manager
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    platform: linux/amd64
+    container_name: field_manager_db
+    restart: always
+    volumes:
+      - type: volume
+        source: field_manager_db_data
+        target: /var/lib/postgresql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - ${POSTGRES_HOST_PORT}:5432
+    networks:
+      - field_manager_network
+
+  pgweb:
+    image: sosedoff/pgweb
+    container_name: field_manager_pgweb
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - ${PGWEB_HOST_PORT}:8081
+    environment:
+      PGWEB_DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable"
+    networks:
+      - field_manager_network
+
+  valkey:
+    image: valkey/valkey:9.0
+    container_name: field_manager_valkey
+    restart: always
+    volumes:
+      - type: volume
+        source: field_manager_cache_data
+        target: /data
+    ports:
+      - ${VALKEY_HOST_PORT}:6379
+    command: >
+      valkey-server
+      --appendonly yes
+      --requirepass ${VALKEY_PASSWORD}
+    networks:
+      - field_manager_network
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-alpha.72
+    container_name: field_manager_rustfs
+    restart: always
+    ports:
+      - "${RUSTFS_HOST_PORT}:9000"
+      - "${RUSTFS_HOST_UI_PORT}:9001"
+    environment:
+      RUSTFS_ACCESS_KEY: ${RUSTFS_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${RUSTFS_SECRET_KEY}
+      RUSTFS_CONSOLE_ENABLED: "true"
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ADDRESS: ":9001"
+      RUSTFS_CORS_ALLOW_ORIGIN: "*"
+      RUSTFS_CORS_ALLOW_METHODS: "*"
+      RUSTFS_CORS_ALLOW_HEADERS: "*"
+      RUSTFS_CORS_EXPOSE_HEADERS: "*"
+      RUSTFS_CORS_ALLOW_CREDENTIALS: "true"
+    volumes:
+      - type: volume
+        source: field_manager_rustfs_data
+        target: /data
+    networks:
+      - field_manager_network
+
+volumes:
+  field_manager_db_data:
+    name: field_manager_db_data
+  field_manager_cache_data:
+    name: field_manager_cache_data
+  field_manager_rustfs_data:
+    name: field_manager_rustfs_data
+
+networks:
+  field_manager_network:
+    name: field_manager_network
+    driver: bridge
