@@ -85,3 +85,10 @@ Presentation → Application → Domain ← Infrastructure
 - チケット番号=ブランチ名`feature/xxxxx`の`xxxxx`部分
 
 **粒度**: 1機能=1コミット / ファイル種別別 / 影響範囲別 / WIP禁止
+
+## 禁止事項
+- 全角（）の使用
+- Testをパスさせるために、Skipを使用すること
+- Test以外でのerrorの `_` を使ったハンドリングの回避
+- 機能(Feature)パッケージ間の直接的な `import` での参照
+  - ある機能(Consumer)が別の機能(Provider)のロジックを必要とする場合、**Consumer側で必要なインターフェースを定義** し、Providerの実装に依存しないようにして対応してください
