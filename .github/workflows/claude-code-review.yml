@@ -37,21 +37,41 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
+            このリポジトリはGo + Gin + oapi-codegenを使用したClean Architecture + Package by Feature構成のAPIサーバーです。
 
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            ## アーキテクチャルール
+            - 依存方向: Presentation → Application → Domain ← Infrastructure
+            - Domain層は外側に依存しない
+            - 機能パッケージ間の直接importは禁止(Consumer側でインターフェース定義)
+            - internal/generated/配下は自動生成コード(レビュー対象外)
 
-            Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
+            ## Feature構成
+            internal/features/<feature>/
+            ├── domain/entity/         # エンティティ、Value Object
+            ├── domain/repository/     # リポジトリインターフェース
+            ├── application/usecase/   # ユースケース実装
+            ├── application/port/      # 外部サービスインターフェース
+            ├── infrastructure/        # リポジトリ・クエリ実装
+            └── presentation/          # HTTPハンドラー
 
-            Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+            ## レビュー観点
+            PRの差分を確認し、以下の点について日本語でレビューしてください：
+
+            ### 必須確認
+            - [ ] アーキテクチャルール違反(依存方向、機能間import)
+            - [ ] エラーハンドリング(`_`でのerror無視は禁止)
+            - [ ] セキュリティ(SQLインジェクション、入力検証)
+            - [ ] 潜在的なバグやnil参照
+
+            ### 推奨確認
+            - [ ] Goのベストプラクティス(命名、エラー処理)
+            - [ ] テストの妥当性
+            - [ ] パフォーマンス考慮事項
+
+            ## 出力形式
+            優先度別(🔴高/🟡中/🟢低)に分類し、具体的な修正提案を含めてください。
+            問題がない場合は「指摘なし」と明記してください。
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
-
