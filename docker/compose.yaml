@@ -85,6 +85,30 @@ services:
     networks:
       - field_manager_network
 
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: field_manager_localstack
+    restart: always
+    ports:
+      - "${LOCALSTACK_HOST_PORT}:4566"
+    environment:
+      SERVICES: stepfunctions,lambda,s3,logs
+      DEBUG: ${LOCALSTACK_DEBUG:-0}
+      PERSISTENCE: 1
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: volume
+        source: field_manager_localstack_data
+        target: /var/lib/localstack
+      - type: bind
+        source: ./localstack/init
+        target: /etc/localstack/init/ready.d
+    networks:
+      - field_manager_network
+
 volumes:
   field_manager_db_data:
     name: field_manager_db_data
@@ -92,6 +116,8 @@ volumes:
     name: field_manager_cache_data
   field_manager_rustfs_data:
     name: field_manager_rustfs_data
+  field_manager_localstack_data:
+    name: field_manager_localstack_data
 
 networks:
   field_manager_network:

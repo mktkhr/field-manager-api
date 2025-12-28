@@ -185,4 +185,90 @@ migrate-status: ## マイグレーション状態確認
 	@echo "Migration status:"
 	@migrate -path db/migrations -database "$(DB_URL)" version 2>&1 || true
 
-.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean gosec-install gosec-scan sqlc-install sqlc-generate generate migrate-install migrate-create migrate-up migrate-up-one migrate-down migrate-down-all migrate-force migrate-version migrate-status
+# =============================================================================
+# LocalStack
+# =============================================================================
+localstack-up: ## LocalStackを起動
+	@echo "LocalStackを起動しています..."
+	@docker compose -f docker/compose.yaml up -d localstack
+	@echo "LocalStackの起動を待機中..."
+	@sleep 10
+	@echo "LocalStack起動完了"
+
+localstack-logs: ## LocalStackのログを表示
+	@docker compose -f docker/compose.yaml logs -f localstack
+
+localstack-status: ## LocalStackのステータス確認
+	@docker compose -f docker/compose.yaml exec localstack awslocal stepfunctions list-state-machines
+	@docker compose -f docker/compose.yaml exec localstack awslocal s3 ls
+
+localstack-build-lambda: ## wagri-fetcher Lambdaをビルド
+	@echo "wagri-fetcher Lambdaをビルドしています..."
+	@GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o cmd/wagri-fetcher/bootstrap ./cmd/wagri-fetcher
+	@cd cmd/wagri-fetcher && zip -j wagri-fetcher.zip bootstrap
+	@echo "ビルド完了: cmd/wagri-fetcher/wagri-fetcher.zip"
+
+localstack-deploy-lambda: localstack-build-lambda ## wagri-fetcher LambdaをLocalStackにデプロイ
+	@echo "wagri-fetcher LambdaをLocalStackにデプロイしています..."
+	@docker compose -f docker/compose.yaml exec localstack awslocal lambda create-function \
+		--function-name wagri-fetcher \
+		--runtime provided.al2023 \
+		--handler bootstrap \
+		--zip-file fileb:///tmp/wagri-fetcher.zip \
+		--role arn:aws:iam::000000000000:role/lambda-role \
+		2>/dev/null || \
+	docker compose -f docker/compose.yaml exec localstack awslocal lambda update-function-code \
+		--function-name wagri-fetcher \
+		--zip-file fileb:///tmp/wagri-fetcher.zip
+	@echo "デプロイ完了"
+
+localstack-invoke-lambda: ## wagri-fetcher Lambdaをテスト実行
+	@echo "wagri-fetcher Lambdaをテスト実行しています..."
+	@docker compose -f docker/compose.yaml exec localstack awslocal lambda invoke \
+		--function-name wagri-fetcher \
+		--payload '{"city_code":"163210","import_job_id":"00000000-0000-0000-0000-000000000001"}' \
+		/tmp/response.json
+	@docker compose -f docker/compose.yaml exec localstack cat /tmp/response.json
+
+localstack-start-workflow: ## Step Functionsワークフローをテスト実行
+	@echo "Step Functionsワークフローをテスト実行しています..."
+	@docker compose -f docker/compose.yaml exec localstack awslocal stepfunctions start-execution \
+		--state-machine-arn arn:aws:states:ap-northeast-1:000000000000:stateMachine:wagri-import-workflow \
+		--input '{"city_code":"163210","import_job_id":"00000000-0000-0000-0000-000000000001"}'
+
+localstack-list-executions: ## Step Functions実行履歴を表示
+	@docker compose -f docker/compose.yaml exec localstack awslocal stepfunctions list-executions \
+		--state-machine-arn arn:aws:states:ap-northeast-1:000000000000:stateMachine:wagri-import-workflow
+
+# =============================================================================
+# Import Processor (EKS Job)
+# =============================================================================
+import-processor-build: ## import-processor Dockerイメージをビルド
+	@echo "import-processor Dockerイメージをビルドしています..."
+	@docker build -f docker/import-processor/Dockerfile -t import-processor:local .
+	@echo "ビルド完了: import-processor:local"
+
+import-processor-run: ## import-processorをローカル実行 (S3_KEY=xxx IMPORT_JOB_ID=xxx)
+	@if [ -z "$(S3_KEY)" ] || [ -z "$(IMPORT_JOB_ID)" ]; then \
+		echo "Error: S3_KEY and IMPORT_JOB_ID are required."; \
+		echo "Usage: make import-processor-run S3_KEY=imports/163210/xxx.json IMPORT_JOB_ID=xxx"; \
+		exit 1; \
+	fi
+	@echo "import-processorをローカル実行しています..."
+	@docker run --rm \
+		--network field_manager_network \
+		-e AWS_REGION=ap-northeast-1 \
+		-e LOCALSTACK_ENABLED=true \
+		-e LOCALSTACK_URL=http://localstack:4566 \
+		-e AWS_S3_BUCKET=field-manager-imports \
+		-e DB_HOST=postgres \
+		-e DB_PORT=5432 \
+		-e DB_USER=$(POSTGRES_USER) \
+		-e DB_PASSWORD=$(POSTGRES_PASSWORD) \
+		-e DB_NAME=$(POSTGRES_DB) \
+		-e DB_SSL_MODE=disable \
+		import-processor:local \
+		--s3-key $(S3_KEY) \
+		--import-job-id $(IMPORT_JOB_ID)
+
+.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean gosec-install gosec-scan sqlc-install sqlc-generate generate migrate-install migrate-create migrate-up migrate-up-one migrate-down migrate-down-all migrate-force migrate-version migrate-status localstack-up localstack-logs localstack-status localstack-build-lambda localstack-deploy-lambda localstack-invoke-lambda localstack-start-workflow localstack-list-executions import-processor-build import-processor-run
