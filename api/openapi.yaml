@@ -16,6 +16,8 @@ tags:
     description: ヘルスチェック
   - name: fields
     description: 圃場管理
+  - name: imports
+    description: wagriデータインポート
 
 # セキュリティ定義(認証なしを明示)
 security: []
@@ -121,6 +123,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/imports:
+    post:
+      tags:
+        - imports
+      summary: インポートリクエスト
+      description: wagri APIからのデータインポートをリクエストする
+      operationId: requestImport
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportRequest"
+      responses:
+        "202":
+          description: インポートリクエスト受付
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResponse"
+        "400":
+          description: リクエストパラメータが不正
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/imports/{importId}:
+    get:
+      tags:
+        - imports
+      summary: インポートステータス取得
+      description: インポートジョブのステータスを取得する
+      operationId: getImportStatus
+      security: []
+      parameters:
+        - name: importId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: インポートステータス
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportStatus"
+        "404":
+          description: インポートジョブが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthResponse:
@@ -182,3 +253,76 @@ components:
             $ref: "#/components/schemas/Field"
         total:
           type: integer
+
+    ImportRequest:
+      type: object
+      required:
+        - cityCode
+      properties:
+        cityCode:
+          type: string
+          description: 市区町村コード
+          example: "163210"
+
+    ImportResponse:
+      type: object
+      required:
+        - importId
+      properties:
+        importId:
+          type: string
+          format: uuid
+          description: インポートジョブID
+        executionArn:
+          type: string
+          description: Step Functions実行ARN
+
+    ImportStatus:
+      type: object
+      required:
+        - id
+        - cityCode
+        - status
+        - processedRecords
+        - failedRecords
+        - progress
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        cityCode:
+          type: string
+        status:
+          type: string
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+            - partially_completed
+        totalRecords:
+          type: integer
+          nullable: true
+        processedRecords:
+          type: integer
+        failedRecords:
+          type: integer
+        progress:
+          type: number
+          format: double
+          description: 進捗率(0-100)
+        errorMessage:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
