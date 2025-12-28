@@ -3,31 +3,37 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/mktkhr/field-manager-api/internal/config"
+	"github.com/mktkhr/field-manager-api/internal/logger"
 )
 
 func main() {
-	fmt.Println("サーバーを起動しています...")
-
 	// 設定読み込み
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("設定の読み込みに失敗しました: %v", err)
 	}
 
-	log.Printf("データベース接続先: %s:%d/%s", cfg.Database.Host, cfg.Database.Port, cfg.Database.Name)
-	log.Printf("キャッシュ接続先: %s:%d", cfg.Cache.Host, cfg.Cache.Port)
-	log.Printf("ストレージエンドポイント: %s", cfg.Storage.Endpoint)
+	// ログ設定
+	logger.Setup(cfg.Logger)
+
+	slog.Info("サーバーを起動しています...")
+	slog.Info("設定読み込み完了",
+		"database", fmt.Sprintf("%s:%d/%s", cfg.Database.Host, cfg.Database.Port, cfg.Database.Name),
+		"cache", fmt.Sprintf("%s:%d", cfg.Cache.Host, cfg.Cache.Port),
+		"storage", cfg.Storage.Endpoint,
+	)
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	log.Println("サーバーがポート :8080 で起動しました")
+	slog.Info("サーバーがポート :8080 で起動しました")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal(err)
+		slog.Error("サーバー起動エラー", "error", err)
 	}
 }
