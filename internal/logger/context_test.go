@@ -19,24 +19,24 @@ func TestWithRequestID(t *testing.T) {
 
 func TestGetRequestIDFromContext(t *testing.T) {
 	tests := []struct {
-		name      string
-		ctx       context.Context
-		want      string
+		name string
+		ctx  context.Context
+		want string
 	}{
 		{
-			name:      "リクエストIDが設定されている場合",
-			ctx:       context.WithValue(context.Background(), RequestIDContextKey, "test-id"),
-			want:      "test-id",
+			name: "リクエストIDが設定されている場合",
+			ctx:  context.WithValue(context.Background(), RequestIDContextKey, "test-id"),
+			want: "test-id",
 		},
 		{
-			name:      "リクエストIDが設定されていない場合",
-			ctx:       context.Background(),
-			want:      "",
+			name: "リクエストIDが設定されていない場合",
+			ctx:  context.Background(),
+			want: "",
 		},
 		{
-			name:      "異なる型の値が設定されている場合",
-			ctx:       context.WithValue(context.Background(), RequestIDContextKey, 123),
-			want:      "",
+			name: "異なる型の値が設定されている場合",
+			ctx:  context.WithValue(context.Background(), RequestIDContextKey, 123),
+			want: "",
 		},
 	}
 
@@ -100,16 +100,16 @@ func TestNewRequestLogger(t *testing.T) {
 
 func TestInfoWithContext(t *testing.T) {
 	tests := []struct {
-		name      string
-		ctx       context.Context
+		name string
+		ctx  context.Context
 	}{
 		{
-			name:      "リクエストIDあり",
-			ctx:       WithRequestID(context.Background(), "test-id"),
+			name: "リクエストIDあり",
+			ctx:  WithRequestID(context.Background(), "test-id"),
 		},
 		{
-			name:      "リクエストIDなし",
-			ctx:       context.Background(),
+			name: "リクエストIDなし",
+			ctx:  context.Background(),
 		},
 	}
 
@@ -123,16 +123,16 @@ func TestInfoWithContext(t *testing.T) {
 
 func TestErrorWithContext(t *testing.T) {
 	tests := []struct {
-		name      string
-		ctx       context.Context
+		name string
+		ctx  context.Context
 	}{
 		{
-			name:      "リクエストIDあり",
-			ctx:       WithRequestID(context.Background(), "test-id"),
+			name: "リクエストIDあり",
+			ctx:  WithRequestID(context.Background(), "test-id"),
 		},
 		{
-			name:      "リクエストIDなし",
-			ctx:       context.Background(),
+			name: "リクエストIDなし",
+			ctx:  context.Background(),
 		},
 	}
 
@@ -145,16 +145,16 @@ func TestErrorWithContext(t *testing.T) {
 
 func TestWarnWithContext(t *testing.T) {
 	tests := []struct {
-		name      string
-		ctx       context.Context
+		name string
+		ctx  context.Context
 	}{
 		{
-			name:      "リクエストIDあり",
-			ctx:       WithRequestID(context.Background(), "test-id"),
+			name: "リクエストIDあり",
+			ctx:  WithRequestID(context.Background(), "test-id"),
 		},
 		{
-			name:      "リクエストIDなし",
-			ctx:       context.Background(),
+			name: "リクエストIDなし",
+			ctx:  context.Background(),
 		},
 	}
 
@@ -167,16 +167,16 @@ func TestWarnWithContext(t *testing.T) {
 
 func TestDebugWithContext(t *testing.T) {
 	tests := []struct {
-		name      string
-		ctx       context.Context
+		name string
+		ctx  context.Context
 	}{
 		{
-			name:      "リクエストIDあり",
-			ctx:       WithRequestID(context.Background(), "test-id"),
+			name: "リクエストIDあり",
+			ctx:  WithRequestID(context.Background(), "test-id"),
 		},
 		{
-			name:      "リクエストIDなし",
-			ctx:       context.Background(),
+			name: "リクエストIDなし",
+			ctx:  context.Background(),
 		},
 	}
 
