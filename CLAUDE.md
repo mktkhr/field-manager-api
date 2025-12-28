@@ -2,6 +2,21 @@
 
 Go + Gin + oapi-codegen を使用した Package by Feature + クリーンアーキテクチャ構成のAPIサーバー。
 
+## 前提
+ユーザーはGoのスペシャリストですが、作業の効率化を図るためにあなたの作業を依頼しています。
+ClaudeもGoのスペシャリストです。修正はGoのベストプラクティスに沿って実行してください。
+
+## 絶対に守るルール
+### 対話ルール
+Claudeがユーザーと対話する場合は必ず日本語で行ってください。思考プロセスにおいて英語の方が都合が良ければ英語で思考して構いません。
+
+### 禁止事項
+- 全角（）の使用
+- Testをパスさせるために、Skipを使用すること
+- Test以外でのerrorの `_` を使ったハンドリングの回避
+- 機能(Feature)パッケージ間の直接的な `import` での参照
+  - ある機能(Consumer)が別の機能(Provider)のロジックを必要とする場合、**Consumer側で必要なインターフェースを定義** し、Providerの実装に依存しないようにして対応してください
+
 ## ディレクトリ構成
 
 ```
@@ -86,13 +101,6 @@ Presentation → Application → Domain ← Infrastructure
 
 **粒度**: 1機能=1コミット / ファイル種別別 / 影響範囲別 / WIP禁止
 
-## 禁止事項
-- 全角（）の使用
-- Testをパスさせるために、Skipを使用すること
-- Test以外でのerrorの `_` を使ったハンドリングの回避
-- 機能(Feature)パッケージ間の直接的な `import` での参照
-  - ある機能(Consumer)が別の機能(Provider)のロジックを必要とする場合、**Consumer側で必要なインターフェースを定義** し、Providerの実装に依存しないようにして対応してください
-
 ## 開発ワークフロー（新機能追加）
 
 **手順**:
@@ -102,3 +110,35 @@ Presentation → Application → Domain ← Infrastructure
 4. **テスト**: 各レイヤーで`*_test.go`（単体）/`*_integration_test.go`(統合)作成
 5. **DI登録**: `internal/server/router.go`に追加
 6. **検証**: `make test` → `make cover` → `make lint` → `make gesec-scan` → `make build`
+
+## データベース開発ルール
+
+### マイグレーション
+
+- **CLI運用**: `make migrate-*` コマンドで管理(サーバー起動時実行ではない)
+- **命名規則**: `NNNNNN_動詞_対象.sql`(例: `000001_create_fields.sql`)
+- **必須**: up.sql と down.sql は必ずペアで作成
+- **down.sql**: 完全にロールバック可能であること(データ損失注意)
+
+### SQLC
+
+- **クエリファイル**: `db/queries/<テーブル名>.sql`
+- **生成先**: `internal/generated/sqlc/`(編集禁止)
+- **PostGIS型**: geometry型は `github.com/twpayne/go-geom` を使用
+
+### 圃場(Field)テーブル設計
+
+- **H3インデックス**: 4解像度(res3, res5, res7, res9)をGo側で計算、DBはVARCHAR保存
+- **ソフトデリート**: `is_deleted` + `deleted_at` で論理削除
+- **監査カラム**: `created_at`, `updated_at`, `created_by`, `updated_by`
+
+### H3インデックス計算
+
+- **計算場所**: Go側(`uber/h3-go`ライブラリ使用)
+- **理由**: RDS/Auroraでh3-pg拡張が使用不可のため
+- **保存形式**: VARCHAR(15)
+
+### wagriデータ変換
+
+- `LinearPolygon` → `Polygon` に変換
+- 座標が閉じていない場合は最初の点を末尾に追加
