@@ -1,0 +1,283 @@
+name: Develop Pipeline
+
+on:
+  push:
+    branches: [develop]
+
+env:
+  GO_VERSION: '1.25.5'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/app
+
+jobs:
+  # ===== BUILD & PUSH IMAGE =====
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+            type=raw,value=latest
+            type=raw,value=daily
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/app/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===== TEST =====
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_HOST: postgres
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: opt_app_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: opt_app_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL_MODE: disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run unit tests
+        run: make test-unit
+
+      - name: Run integration tests
+        run: make test-integration
+
+      - name: Generate coverage report
+        run: make cover
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 7
+
+  # ===== DOCS GENERATION =====
+  generate-docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    needs: [test]
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: opt_app
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: optimoptim
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      # Run migrations
+      - name: Run migrations
+        run: |
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          migrate -path db/migrations -database "postgres://postgres:optimoptim@localhost:5432/opt_app?sslmode=disable" up
+
+      # Setup Java for SchemaSpy
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # Generate SchemaSpy
+      - name: Generate SchemaSpy
+        run: |
+          sudo apt-get update && sudo apt-get install -y graphviz
+          wget -q https://jdbc.postgresql.org/download/postgresql-42.5.4.jar -O postgresql-jdbc.jar
+          wget -q https://github.com/schemaspy/schemaspy/releases/download/v6.2.4/schemaspy-6.2.4.jar -O schemaspy.jar
+          java -jar schemaspy.jar \
+            -t pgsql \
+            -dp postgresql-jdbc.jar \
+            -db opt_app \
+            -host localhost \
+            -port 5432 \
+            -u postgres \
+            -p optimoptim \
+            -s public \
+            -o schema-output
+
+      # Setup Node.js for Redocly
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Generate API docs
+      - name: Generate API docs
+        run: |
+          npm install -g @redocly/cli
+          mkdir -p api-output
+          redocly build-docs api/openapi.yaml -o api-output/index.html
+
+      # Download coverage report
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+
+      # Assemble pages
+      - name: Assemble pages
+        run: |
+          mkdir -p public/schemaspy public/redocly public/coverage
+          cp -r schema-output/* public/schemaspy/
+          cp -r api-output/* public/redocly/
+          cp coverage.html public/coverage/index.html
+          cat <<'EOF' > public/index.html
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Field Manager API Documentation</title>
+            <style>
+              :root {
+                --primary-color: #007bff;
+                --primary-hover: #0056b3;
+                --background: #f8f9fa;
+                --card-bg: #ffffff;
+                --text-color: #333333;
+              }
+              @media (prefers-color-scheme: dark) {
+                :root {
+                  --primary-color: #339af0;
+                  --primary-hover: #1c7ed6;
+                  --background: #1e1e1e;
+                  --card-bg: #2c2c2c;
+                  --text-color: #eeeeee;
+                }
+              }
+              body {
+                font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                background: var(--background);
+                color: var(--text-color);
+                margin: 0;
+                padding: 1rem;
+              }
+              .container {
+                max-width: 800px;
+                margin: 0 auto;
+                background: var(--card-bg);
+                border-radius: 12px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+                padding: 2rem;
+              }
+              h1 {
+                text-align: center;
+                color: var(--text-color);
+                font-size: 1.8rem;
+              }
+              ul {
+                list-style: none;
+                padding: 0;
+                margin-top: 2rem;
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 1rem;
+              }
+              a {
+                display: block;
+                text-decoration: none;
+                background-color: var(--primary-color);
+                color: white;
+                padding: 1rem;
+                border-radius: 8px;
+                font-size: 1.1rem;
+                transition: background-color 0.2s ease-in-out;
+              }
+              a:hover {
+                background-color: var(--primary-hover);
+              }
+              @media (min-width: 600px) {
+                ul {
+                  grid-template-columns: 1fr 1fr;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Field Manager API Documentation</h1>
+              <ul>
+                <li><a href="./schemaspy/index.html">Database Schema (SchemaSpy)</a></li>
+                <li><a href="./redocly/index.html">API Specification (Redocly)</a></li>
+                <li><a href="./coverage/index.html">Test Coverage Report</a></li>
+              </ul>
+            </div>
+          </body>
+          </html>
+          EOF
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  # ===== DEPLOY TO GITHUB PAGES =====
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [generate-docs]
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

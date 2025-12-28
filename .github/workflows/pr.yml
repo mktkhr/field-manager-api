@@ -1,0 +1,263 @@
+name: Pull Request Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: '1.25.5'
+  COVERAGE_THRESHOLD: '70'
+
+jobs:
+  # ===== VALIDATE =====
+  api-spec-validation:
+    name: OpenAPI Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli
+
+      - name: Validate OpenAPI spec
+        run: redocly lint api/openapi.yaml
+
+  go-mod-check:
+    name: Go Modules Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Check go.mod and go.sum
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum || \
+            (echo "::error::go.mod or go.sum is out of date. Run 'go mod tidy' and commit." && exit 1)
+
+  generated-code-check:
+    name: Generated Code Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install tools
+        run: |
+          npm install -g @redocly/cli
+          go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+
+      - name: Generate code
+        run: make api-generate
+
+      - name: Check for changes
+        run: |
+          git diff --exit-code internal/generated/ || \
+            (echo "::error::Generated code is out of date. Run 'make api-generate' and commit." && exit 1)
+
+  # ===== BUILD =====
+  build-binary:
+    name: Build Binary
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Build
+        run: make build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary
+          path: bin/
+          retention-days: 1
+
+  build-image:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/app/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===== TEST =====
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run unit tests
+        run: make test-unit
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_HOST: postgres
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: opt_app_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: opt_app_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL_MODE: disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run integration tests
+        run: make test-integration
+
+      - name: Generate coverage report
+        run: |
+          make cover
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Coverage: ${COVERAGE}%"
+          if [ "$(echo "$COVERAGE < ${{ env.COVERAGE_THRESHOLD }}" | bc)" = "1" ]; then
+            echo "::warning::Coverage is below ${COVERAGE_THRESHOLD}% (current: ${COVERAGE}%)"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.out
+            coverage.html
+          retention-days: 7
+
+  # ===== QUALITY =====
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  # ===== SECURITY =====
+  vulnerability-scan:
+    name: Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  gosec-scan:
+    name: Gosec Security Scan
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Run gosec
+        run: make gosec-scan
+
+  secret-detection:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    needs: [go-mod-check]
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-go
+
+      - name: Check licenses
+        run: |
+          go install github.com/google/go-licenses@latest
+          go-licenses csv ./... > licenses.csv || true
+          if grep -i "gpl\|copyleft" licenses.csv 2>/dev/null; then
+            echo "::warning::GPL or copyleft licenses detected. Please review."
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: licenses
+          path: licenses.csv
+          retention-days: 7
+
+  dockerfile-security:
+    name: Dockerfile Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/app/Dockerfile
+          format: tty
+        continue-on-error: true
