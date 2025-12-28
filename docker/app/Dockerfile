@@ -26,9 +26,4 @@ EXPOSE 8080
 # 非rootユーザーで実行
 USER nonroot:nonroot
 
-# ヘルスチェック
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/server", "-health"] || exit 1
-
-# エントリーポイント
 ENTRYPOINT ["/server"]
