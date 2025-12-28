@@ -1,0 +1,26 @@
+name: 'Setup Go Environment'
+description: 'Go環境のセットアップ、依存関係のダウンロード、キャッシュ設定'
+
+inputs:
+  go-version:
+    description: 'Goバージョン'
+    required: false
+    default: '1.25.5'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: true
+        cache-dependency-path: go.sum
+
+    - name: Download Go modules
+      shell: bash
+      run: go mod download
+
+    - name: Verify dependencies
+      shell: bash
+      run: go mod verify

@@ -1,0 +1,53 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+coverage.out
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config
+config/config.yaml
+config/clients.yaml
+config/keys/*.pem
+
+# Security scan reports
+gosec-report.json
+
+# OpenAPI generated/bundled files
+api/_build/
+api/_doc/
+
+# Air (hot reload)
+tmp/
+
+# Debug
+debug
+*.log
+
+# ENV
+.env

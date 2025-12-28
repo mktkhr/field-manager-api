@@ -1,0 +1,184 @@
+openapi: 3.0.3
+info:
+  title: Field Manager API
+  description: 圃場管理システムAPI
+  version: 0.1.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: /
+    description: 相対パス
+
+tags:
+  - name: health
+    description: ヘルスチェック
+  - name: fields
+    description: 圃場管理
+
+# セキュリティ定義(認証なしを明示)
+security: []
+
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: ヘルスチェック
+      operationId: healthCheck
+      security: []
+      responses:
+        "200":
+          description: サーバーが正常に動作している
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "429":
+          description: リクエスト過多
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: サービス利用不可
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/fields:
+    get:
+      tags:
+        - fields
+      summary: 圃場一覧取得
+      operationId: listFields
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: 圃場一覧
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldListResponse"
+        "400":
+          description: リクエストパラメータが不正
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/fields/{fieldId}:
+    get:
+      tags:
+        - fields
+      summary: 圃場詳細取得
+      operationId: getField
+      security: []
+      parameters:
+        - name: fieldId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 圃場詳細
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Field"
+        "404":
+          description: 圃場が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    Field:
+      type: object
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        areaHa:
+          type: number
+          format: double
+          description: 面積(ヘクタール)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FieldListResponse:
+      type: object
+      required:
+        - fields
+        - total
+      properties:
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/Field"
+        total:
+          type: integer

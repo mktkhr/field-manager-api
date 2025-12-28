@@ -1,0 +1,8 @@
+# oapi-codegen設定: Ginサーバーインターフェース生成
+package: openapi
+output: ../internal/generated/openapi/server.gen.go
+generate:
+  models: false
+  embedded-spec: false
+  strict-server: true
+  gin-server: true
