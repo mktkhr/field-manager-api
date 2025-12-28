@@ -14,6 +14,14 @@ func TestLoad(t *testing.T) {
 		t.Fatalf("Load() error = %v", err)
 	}
 
+	// Logger defaults
+	if cfg.Logger.Level != "INFO" {
+		t.Errorf("Logger.Level = %q, want %q", cfg.Logger.Level, "INFO")
+	}
+	if cfg.Logger.Environment != "development" {
+		t.Errorf("Logger.Environment = %q, want %q", cfg.Logger.Environment, "development")
+	}
+
 	// Database defaults
 	if cfg.Database.Host != "localhost" {
 		t.Errorf("Database.Host = %q, want %q", cfg.Database.Host, "localhost")
@@ -89,6 +97,9 @@ func TestLoad(t *testing.T) {
 
 func TestLoadWithCustomValues(t *testing.T) {
 	// カスタム値を設定
+	t.Setenv("LOG_LEVEL", "DEBUG")
+	t.Setenv("ENVIRONMENT", "production")
+
 	t.Setenv("DB_HOST", "custom-db-host")
 	t.Setenv("DB_PORT", "5433")
 	t.Setenv("DB_USER", "custom-user")
@@ -121,6 +132,14 @@ func TestLoadWithCustomValues(t *testing.T) {
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
+	}
+
+	// Logger
+	if cfg.Logger.Level != "DEBUG" {
+		t.Errorf("Logger.Level = %q, want %q", cfg.Logger.Level, "DEBUG")
+	}
+	if cfg.Logger.Environment != "production" {
+		t.Errorf("Logger.Environment = %q, want %q", cfg.Logger.Environment, "production")
 	}
 
 	// Database
@@ -246,6 +265,46 @@ func TestStorageConfigGetPublicEndpoint(t *testing.T) {
 			}
 			if got := s.GetPublicEndpoint(); got != tt.want {
 				t.Errorf("GetPublicEndpoint() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoggerConfigIsProduction(t *testing.T) {
+	tests := []struct {
+		name        string
+		environment string
+		want        bool
+	}{
+		{
+			name:        "production環境の場合",
+			environment: "production",
+			want:        true,
+		},
+		{
+			name:        "development環境の場合",
+			environment: "development",
+			want:        false,
+		},
+		{
+			name:        "空文字の場合",
+			environment: "",
+			want:        false,
+		},
+		{
+			name:        "その他の値の場合",
+			environment: "staging",
+			want:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &LoggerConfig{
+				Environment: tt.environment,
+			}
+			if got := c.IsProduction(); got != tt.want {
+				t.Errorf("IsProduction() = %v, want %v", got, tt.want)
 			}
 		})
 	}

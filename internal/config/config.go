@@ -7,6 +7,7 @@ import (
 
 // Config はアプリケーション全体の設定を保持する
 type Config struct {
+	Logger   LoggerConfig
 	Database DatabaseConfig
 	Cache    CacheConfig
 	Storage  StorageConfig
