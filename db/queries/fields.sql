@@ -108,3 +108,30 @@ RETURNING *;
 -- name: DeleteField :exec
 -- 圃場を削除
 DELETE FROM fields WHERE id = $1;
+
+-- name: UpsertField :one
+-- 圃場をUPSERT(wagriインポート用)
+INSERT INTO fields (
+    id,
+    geometry,
+    centroid,
+    h3_index_res3,
+    h3_index_res5,
+    h3_index_res7,
+    h3_index_res9,
+    city_code,
+    soil_type_id
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9
+)
+ON CONFLICT (id) DO UPDATE SET
+    geometry = EXCLUDED.geometry,
+    centroid = EXCLUDED.centroid,
+    h3_index_res3 = EXCLUDED.h3_index_res3,
+    h3_index_res5 = EXCLUDED.h3_index_res5,
+    h3_index_res7 = EXCLUDED.h3_index_res7,
+    h3_index_res9 = EXCLUDED.h3_index_res9,
+    city_code = EXCLUDED.city_code,
+    soil_type_id = EXCLUDED.soil_type_id,
+    updated_at = NOW()
+RETURNING *;
