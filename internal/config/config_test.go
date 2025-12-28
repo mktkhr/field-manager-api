@@ -6,8 +6,36 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	// 必須の環境変数を設定
+	// 全ての環境変数を明示的に設定(.envファイルの影響を排除)
+	// Logger
+	t.Setenv("LOG_LEVEL", "INFO")
+	t.Setenv("ENVIRONMENT", "development")
+	// Database
+	t.Setenv("DB_HOST", "localhost")
+	t.Setenv("DB_PORT", "5432")
+	t.Setenv("DB_USER", "postgres")
 	t.Setenv("DB_PASSWORD", "testpassword")
+	t.Setenv("DB_NAME", "field_manager_db")
+	t.Setenv("DB_SSL_MODE", "disable")
+	// Cache
+	t.Setenv("CACHE_HOST", "localhost")
+	t.Setenv("CACHE_PORT", "6379")
+	t.Setenv("CACHE_PASSWORD", "")
+	t.Setenv("CACHE_DATABASE", "0")
+	t.Setenv("CACHE_MAX_RETRIES", "3")
+	t.Setenv("CACHE_CONNECT_TIMEOUT", "5s")
+	t.Setenv("CACHE_READ_TIMEOUT", "5s")
+	t.Setenv("CACHE_WRITE_TIMEOUT", "5s")
+	t.Setenv("CACHE_POOL_SIZE", "10")
+	t.Setenv("CACHE_MIN_IDLE_CONNS", "5")
+	t.Setenv("CACHE_TLS_ENABLED", "false")
+	// Storage
+	t.Setenv("STORAGE_S3_ENABLED", "false")
+	t.Setenv("STORAGE_ENDPOINT", "http://localhost:9000")
+	t.Setenv("STORAGE_REGION", "ap-northeast-1")
+	t.Setenv("STORAGE_BUCKET", "pts-soa-bucket")
+	t.Setenv("STORAGE_USE_PATH_STYLE", "true")
+	t.Setenv("STORAGE_PRESIGNED_URL_EXPIRY", "900s")
 
 	cfg, err := Load()
 	if err != nil {
@@ -228,7 +256,8 @@ func TestLoadWithCustomValues(t *testing.T) {
 }
 
 func TestLoadMissingRequiredEnv(t *testing.T) {
-	// DB_PASSWORDを設定しない(required)
+	// DB_PASSWORDを空文字列に設定(required fieldのテスト)
+	t.Setenv("DB_PASSWORD", "")
 
 	_, err := Load()
 	if err == nil {

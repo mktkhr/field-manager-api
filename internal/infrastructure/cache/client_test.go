@@ -27,9 +27,14 @@ func setupTestRedis(t *testing.T) (*miniredis.Miniredis, *Client) {
 func TestNewClient(t *testing.T) {
 	mr, client := setupTestRedis(t)
 	defer mr.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Close() error = %v", err)
+		}
+	}()
 
 	if client == nil {
-		t.Error("NewClient() should not return nil")
+		t.Fatal("NewClient() should not return nil")
 	}
 	if client.client == nil {
 		t.Error("NewClient() should set internal redis client")
@@ -39,7 +44,11 @@ func TestNewClient(t *testing.T) {
 func TestClient_SetAndGet(t *testing.T) {
 	mr, client := setupTestRedis(t)
 	defer mr.Close()
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Close() error = %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -69,7 +78,11 @@ func TestClient_SetAndGet(t *testing.T) {
 func TestClient_Delete(t *testing.T) {
 	mr, client := setupTestRedis(t)
 	defer mr.Close()
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Close() error = %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -95,7 +108,11 @@ func TestClient_Delete(t *testing.T) {
 func TestClient_Ping(t *testing.T) {
 	mr, client := setupTestRedis(t)
 	defer mr.Close()
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Close() error = %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -118,7 +135,11 @@ func TestClient_Close(t *testing.T) {
 func TestClient_SetWithTTL(t *testing.T) {
 	mr, client := setupTestRedis(t)
 	defer mr.Close()
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			t.Errorf("Close() error = %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 

@@ -66,7 +66,7 @@ func TestNewRedisClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := NewRedisClient(tt.cfg)
 			if client == nil {
-				t.Error("NewRedisClient() should not return nil")
+				t.Fatal("NewRedisClient() should not return nil")
 			}
 
 			opts := client.Options()
@@ -103,7 +103,9 @@ func TestNewRedisClient(t *testing.T) {
 			}
 
 			// クリーンアップ
-			client.Close()
+			if err := client.Close(); err != nil {
+				t.Errorf("Close() error = %v", err)
+			}
 		})
 	}
 }
@@ -138,5 +140,7 @@ func TestNewCacheStore(t *testing.T) {
 	}
 
 	// クリーンアップ
-	store.Close()
+	if err := store.Close(); err != nil {
+		t.Errorf("Close() error = %v", err)
+	}
 }
