@@ -1,4 +1,12 @@
 BINARY_NAME=server
+MIGRATE_VERSION=v4.18.1
+
+# Load .env file if exists
+-include .env
+export
+
+# Database URL for migrations
+DB_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSL_MODE)
 
 help:	## ヘルプ
 	@awk 'BEGIN {FS = ":.*##"} /^([a-zA-Z_-]+):.*##/ { printf "\033[36m%-15s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
@@ -137,4 +145,44 @@ sqlc-generate: sqlc-install ## SQLCでGoコード生成
 
 generate: api-generate sqlc-generate ## 全コード生成(OpenAPI + SQLC)
 
-.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean gosec-install gosec-scan sqlc-install sqlc-generate generate
+# =============================================================================
+# Migration (golang-migrate)
+# =============================================================================
+migrate-install: ## golang-migrateのインストール
+	@echo "Installing golang-migrate..."
+	@go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@$(MIGRATE_VERSION)
+
+migrate-create: ## 新規マイグレーション作成 (NAME=xxx)
+	@if [ -z "$(NAME)" ]; then echo "Error: NAME is required. Usage: make migrate-create NAME=xxx"; exit 1; fi
+	@echo "Creating migration: $(NAME)..."
+	@migrate create -ext sql -dir db/migrations -seq $(NAME)
+
+migrate-up: ## 全マイグレーション適用
+	@echo "Running migrations..."
+	@migrate -path db/migrations -database "$(DB_URL)" up
+
+migrate-up-one: ## 1つ次のマイグレーション適用
+	@echo "Running next migration..."
+	@migrate -path db/migrations -database "$(DB_URL)" up 1
+
+migrate-down: ## 1つ前にロールバック
+	@echo "Rolling back last migration..."
+	@migrate -path db/migrations -database "$(DB_URL)" down 1
+
+migrate-down-all: ## 全ロールバック(注意: データ損失)
+	@echo "Rolling back all migrations..."
+	@migrate -path db/migrations -database "$(DB_URL)" down -all
+
+migrate-force: ## バージョン強制設定 (VERSION=xxx) ※障害復旧用
+	@if [ -z "$(VERSION)" ]; then echo "Error: VERSION is required. Usage: make migrate-force VERSION=xxx"; exit 1; fi
+	@echo "Forcing version: $(VERSION)..."
+	@migrate -path db/migrations -database "$(DB_URL)" force $(VERSION)
+
+migrate-version: ## 現在のバージョン確認
+	@migrate -path db/migrations -database "$(DB_URL)" version
+
+migrate-status: ## マイグレーション状態確認
+	@echo "Migration status:"
+	@migrate -path db/migrations -database "$(DB_URL)" version 2>&1 || true
+
+.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean gosec-install gosec-scan sqlc-install sqlc-generate generate migrate-install migrate-create migrate-up migrate-up-one migrate-down migrate-down-all migrate-force migrate-version migrate-status
