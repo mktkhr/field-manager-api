@@ -129,7 +129,6 @@ Presentation → Application → Domain ← Infrastructure
 ### 圃場(Field)テーブル設計
 
 - **H3インデックス**: 4解像度(res3, res5, res7, res9)をGo側で計算、DBはVARCHAR保存
-- **ソフトデリート**: `is_deleted` + `deleted_at` で論理削除
 - **監査カラム**: `created_at`, `updated_at`, `created_by`, `updated_by`
 
 ### H3インデックス計算
