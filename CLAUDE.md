@@ -92,3 +92,13 @@ Presentation → Application → Domain ← Infrastructure
 - Test以外でのerrorの `_` を使ったハンドリングの回避
 - 機能(Feature)パッケージ間の直接的な `import` での参照
   - ある機能(Consumer)が別の機能(Provider)のロジックを必要とする場合、**Consumer側で必要なインターフェースを定義** し、Providerの実装に依存しないようにして対応してください
+
+## 開発ワークフロー（新機能追加）
+
+**手順**:
+1. **API仕様**: `api/openapi.yaml`定義 → `make api-validate` → `make api-generate`
+2. **パッケージ作成**: `mkdir -p features/<name>/{application/{query,usecase},domain/{entity,repository},infrastructure/{query,repository},presentation}`
+3. **実装**: Domain(Entity+RepoIF) → Application(QueryIF+Usecase) → Infrastructure(Query/Repo実装) → Presentation(ServerIF)
+4. **テスト**: 各レイヤーで`*_test.go`（単体）/`*_integration_test.go`(統合)作成
+5. **DI登録**: `internal/server/router.go`に追加
+6. **検証**: `make test` → `make cover` → `make lint` → `make gesec-scan` → `make build`
