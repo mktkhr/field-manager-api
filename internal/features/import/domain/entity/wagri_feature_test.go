@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// TestParseWagriResponse はParseWagriResponseが空レスポンス、有効なレスポンス、無効なJSONを正しく処理することをテストする
 func TestParseWagriResponse(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -62,23 +63,24 @@ func TestParseWagriResponse(t *testing.T) {
 
 			if tt.wantErr {
 				if err == nil {
-					t.Error("ParseWagriResponse() expected error, got nil")
+					t.Error("ParseWagriResponse()でエラーを期待したがnilが返された")
 				}
 				return
 			}
 
 			if err != nil {
-				t.Errorf("ParseWagriResponse() error = %v", err)
+				t.Errorf("ParseWagriResponse()でエラー発生 = %v", err)
 				return
 			}
 
 			if len(response.TargetFeatures) != tt.wantLen {
-				t.Errorf("len(TargetFeatures) = %d, want %d", len(response.TargetFeatures), tt.wantLen)
+				t.Errorf("len(TargetFeatures) = %d, 期待値 %d", len(response.TargetFeatures), tt.wantLen)
 			}
 		})
 	}
 }
 
+// TestWagriPropertiesHasSoilType はHasSoilTypeメソッドがSoilSmallCodeの有無を正しく判定することをテストする
 func TestWagriPropertiesHasSoilType(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -103,12 +105,13 @@ func TestWagriPropertiesHasSoilType(t *testing.T) {
 				SoilSmallCode: tt.soilSmallCode,
 			}
 			if got := props.HasSoilType(); got != tt.want {
-				t.Errorf("HasSoilType() = %v, want %v", got, tt.want)
+				t.Errorf("HasSoilType() = %v, 期待値 %v", got, tt.want)
 			}
 		})
 	}
 }
 
+// TestWagriFeatureHasPinInfo はHasPinInfoメソッドがPinInfo配列の有無を正しく判定することをテストする
 func TestWagriFeatureHasPinInfo(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -140,12 +143,13 @@ func TestWagriFeatureHasPinInfo(t *testing.T) {
 				},
 			}
 			if got := feature.HasPinInfo(); got != tt.want {
-				t.Errorf("HasPinInfo() = %v, want %v", got, tt.want)
+				t.Errorf("HasPinInfo() = %v, 期待値 %v", got, tt.want)
 			}
 		})
 	}
 }
 
+// TestWagriPinInfoParseDescriptiveStudyData はParseDescriptiveStudyDataメソッドが日付文字列を正しくパースすることをテストする
 func TestWagriPinInfoParseDescriptiveStudyData(t *testing.T) {
 	validDate := "2016-08-31"
 	invalidDate := "invalid-date"
@@ -186,11 +190,11 @@ func TestWagriPinInfoParseDescriptiveStudyData(t *testing.T) {
 			result := pinInfo.ParseDescriptiveStudyData()
 			if tt.wantNil {
 				if result != nil {
-					t.Errorf("ParseDescriptiveStudyData() = %v, want nil", result)
+					t.Errorf("ParseDescriptiveStudyData() = %v, 期待値 nil", result)
 				}
 			} else {
 				if result == nil {
-					t.Error("ParseDescriptiveStudyData() = nil, want non-nil")
+					t.Error("ParseDescriptiveStudyData()がnilです、非nilを期待")
 				}
 			}
 		})
