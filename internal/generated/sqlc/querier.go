@@ -76,6 +76,7 @@ type Querier interface {
 	// インポートジョブの総レコード数を更新
 	UpdateImportJobTotalRecords(ctx context.Context, arg *UpdateImportJobTotalRecordsParams) (*ImportJob, error)
 	// 圃場をUPSERT(wagriインポート用)
+	// geometry, centroidはWKB形式のbytea型で受け取り、ST_GeomFromWKBで変換
 	UpsertField(ctx context.Context, arg *UpsertFieldParams) (*Field, error)
 	// 遊休農地状況をUPSERT
 	UpsertIdleLandStatus(ctx context.Context, arg *UpsertIdleLandStatusParams) (*IdleLandStatus, error)

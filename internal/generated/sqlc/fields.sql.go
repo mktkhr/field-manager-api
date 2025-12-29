@@ -355,7 +355,10 @@ INSERT INTO fields (
     city_code,
     soil_type_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    $1,
+    ST_GeomFromWKB($2::bytea, 4326),
+    ST_GeomFromWKB($3::bytea, 4326),
+    $4, $5, $6, $7, $8, $9
 )
 ON CONFLICT (id) DO UPDATE SET
     geometry = EXCLUDED.geometry,
@@ -372,8 +375,8 @@ RETURNING id, geometry, centroid, area_sqm, h3_index_res3, h3_index_res5, h3_ind
 
 type UpsertFieldParams struct {
 	ID          uuid.UUID     `json:"id"`
-	Geometry    interface{}   `json:"geometry"`
-	Centroid    interface{}   `json:"centroid"`
+	GeometryWkb []byte        `json:"geometry_wkb"`
+	CentroidWkb []byte        `json:"centroid_wkb"`
 	H3IndexRes3 *string       `json:"h3_index_res3"`
 	H3IndexRes5 *string       `json:"h3_index_res5"`
 	H3IndexRes7 *string       `json:"h3_index_res7"`
@@ -383,11 +386,12 @@ type UpsertFieldParams struct {
 }
 
 // 圃場をUPSERT(wagriインポート用)
+// geometry, centroidはWKB形式のbytea型で受け取り、ST_GeomFromWKBで変換
 func (q *Queries) UpsertField(ctx context.Context, arg *UpsertFieldParams) (*Field, error) {
 	row := q.db.QueryRow(ctx, upsertField,
 		arg.ID,
-		arg.Geometry,
-		arg.Centroid,
+		arg.GeometryWkb,
+		arg.CentroidWkb,
 		arg.H3IndexRes3,
 		arg.H3IndexRes5,
 		arg.H3IndexRes7,

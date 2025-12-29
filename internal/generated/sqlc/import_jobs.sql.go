@@ -399,9 +399,9 @@ func (q *Queries) UpdateImportJobS3Key(ctx context.Context, arg *UpdateImportJob
 const updateImportJobStatus = `-- name: UpdateImportJobStatus :one
 UPDATE import_jobs
 SET
-    status = $2,
-    started_at = CASE WHEN $2 = 'processing' AND started_at IS NULL THEN NOW() ELSE started_at END,
-    completed_at = CASE WHEN $2 IN ('completed', 'failed', 'partially_completed') THEN NOW() ELSE completed_at END
+    status = $2::VARCHAR,
+    started_at = CASE WHEN $2::VARCHAR = 'processing' AND started_at IS NULL THEN NOW() ELSE started_at END,
+    completed_at = CASE WHEN $2::VARCHAR IN ('completed', 'failed', 'partially_completed') THEN NOW() ELSE completed_at END
 WHERE id = $1
 RETURNING id, city_code, status, total_records, processed_records, failed_records, last_processed_batch, s3_key, execution_arn, error_message, failed_record_ids, created_at, started_at, completed_at
 `
