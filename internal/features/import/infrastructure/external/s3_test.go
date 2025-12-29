@@ -51,6 +51,7 @@ func (m *mockS3API) HeadObject(ctx context.Context, params *s3.HeadObjectInput, 
 	}, nil
 }
 
+// TestS3Client_Upload はUploadメソッドが正常系とS3エラーを正しく処理することをテストする
 func TestS3Client_Upload(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -106,6 +107,7 @@ func TestS3Client_Upload(t *testing.T) {
 	}
 }
 
+// TestS3Client_Download はDownloadメソッドが正常系とS3エラーを正しく処理することをテストする
 func TestS3Client_Download(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -176,6 +178,7 @@ func TestS3Client_Download(t *testing.T) {
 	}
 }
 
+// TestS3Client_GetObjectStream はGetObjectStreamメソッドがオブジェクトをストリームとして取得できることをテストする
 func TestS3Client_GetObjectStream(t *testing.T) {
 	mock := &mockS3API{
 		getObjectFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
@@ -210,6 +213,7 @@ func TestS3Client_GetObjectStream(t *testing.T) {
 	}
 }
 
+// TestS3Client_Delete はDeleteメソッドが正常系とS3エラーを正しく処理することをテストする
 func TestS3Client_Delete(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -259,6 +263,7 @@ func TestS3Client_Delete(t *testing.T) {
 	}
 }
 
+// TestS3Client_Exists はExistsメソッドがオブジェクトの存在確認を正しく行うことをテストする
 func TestS3Client_Exists(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -305,6 +310,7 @@ func TestS3Client_Exists(t *testing.T) {
 	}
 }
 
+// TestS3Client_UploadValidatesParams はUploadメソッドがS3 APIに正しいパラメータを渡すことをテストする
 func TestS3Client_UploadValidatesParams(t *testing.T) {
 	var capturedParams *s3.PutObjectInput
 
@@ -342,6 +348,7 @@ func TestS3Client_UploadValidatesParams(t *testing.T) {
 	}
 }
 
+// TestS3Client_DownloadValidatesParams はDownloadメソッドがS3 APIに正しいパラメータを渡すことをテストする
 func TestS3Client_DownloadValidatesParams(t *testing.T) {
 	var capturedParams *s3.GetObjectInput
 
@@ -380,6 +387,7 @@ func TestS3Client_DownloadValidatesParams(t *testing.T) {
 	}
 }
 
+// TestS3Client_DeleteValidatesParams はDeleteメソッドがS3 APIに正しいパラメータを渡すことをテストする
 func TestS3Client_DeleteValidatesParams(t *testing.T) {
 	var capturedParams *s3.DeleteObjectInput
 
@@ -413,6 +421,7 @@ func TestS3Client_DeleteValidatesParams(t *testing.T) {
 	}
 }
 
+// TestS3Client_ExistsValidatesParams はExistsメソッドがS3 APIに正しいパラメータを渡すことをテストする
 func TestS3Client_ExistsValidatesParams(t *testing.T) {
 	var capturedParams *s3.HeadObjectInput
 
