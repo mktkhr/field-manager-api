@@ -17,7 +17,7 @@ func TestSetupDevelopment(t *testing.T) {
 
 	// slog.Defaultが設定されていることを確認
 	if slog.Default() == nil {
-		t.Error("slog.Default() should not be nil after Setup")
+		t.Error("slog.Default()はSetup()後にnilであってはならない")
 	}
 }
 
@@ -30,7 +30,7 @@ func TestSetupProduction(t *testing.T) {
 	Setup(cfg)
 
 	if slog.Default() == nil {
-		t.Error("slog.Default() should not be nil after Setup")
+		t.Error("slog.Default()はSetup()後にnilであってはならない")
 	}
 }
 
@@ -75,7 +75,7 @@ func TestParseLogLevel(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := parseLogLevel(tt.level); got != tt.want {
-				t.Errorf("parseLogLevel(%q) = %v, want %v", tt.level, got, tt.want)
+				t.Errorf("parseLogLevel(%q) = %v, 期待値 %v", tt.level, got, tt.want)
 			}
 		})
 	}

@@ -13,7 +13,7 @@ func TestTraceMethod(t *testing.T) {
 	t.Run("パラメータなし", func(t *testing.T) {
 		done := TraceMethod(ctx, "TestMethod")
 		if done == nil {
-			t.Error("TraceMethod() should return a non-nil function")
+			t.Error("TraceMethod()は非nil関数を返すべき")
 		}
 		done()
 	})
@@ -21,7 +21,7 @@ func TestTraceMethod(t *testing.T) {
 	t.Run("パラメータあり", func(t *testing.T) {
 		done := TraceMethod(ctx, "TestMethod", "param1", 123, nil)
 		if done == nil {
-			t.Error("TraceMethod() should return a non-nil function")
+			t.Error("TraceMethod()は非nil関数を返すべき")
 		}
 		done()
 	})
@@ -45,7 +45,7 @@ func TestTraceMethodAuto(t *testing.T) {
 	t.Run("自動メソッド名取得", func(t *testing.T) {
 		done := TraceMethodAuto(ctx)
 		if done == nil {
-			t.Error("TraceMethodAuto() should return a non-nil function")
+			t.Error("TraceMethodAuto()は非nil関数を返すべき")
 		}
 		done()
 	})
@@ -145,12 +145,12 @@ func TestFormatParameter(t *testing.T) {
 			result := formatParameter(tt.param)
 			if tt.wantNil {
 				if result != nil {
-					t.Errorf("formatParameter() = %v, want nil", result)
+					t.Errorf("formatParameter() = %v, 期待値 nil", result)
 				}
 				return
 			}
 			if result == nil {
-				t.Errorf("formatParameter() = nil, want non-nil")
+				t.Errorf("formatParameter()がnilです、非nilを期待")
 			}
 		})
 	}
@@ -161,7 +161,7 @@ func TestFormatParameterPointer(t *testing.T) {
 		var p *string = nil
 		result := formatParameter(p)
 		if result != nil {
-			t.Errorf("formatParameter(nil pointer) = %v, want nil", result)
+			t.Errorf("formatParameter(nilポインタ) = %v, 期待値 nil", result)
 		}
 	})
 
@@ -169,7 +169,7 @@ func TestFormatParameterPointer(t *testing.T) {
 		s := "hello"
 		result := formatParameter(&s)
 		if result != "hello" {
-			t.Errorf("formatParameter(*string) = %v, want 'hello'", result)
+			t.Errorf("formatParameter(*string) = %v, 期待値 'hello'", result)
 		}
 	})
 
@@ -177,7 +177,7 @@ func TestFormatParameterPointer(t *testing.T) {
 		i := 42
 		result := formatParameter(&i)
 		if result != 42 {
-			t.Errorf("formatParameter(*int) = %v, want 42", result)
+			t.Errorf("formatParameter(*int) = %v, 期待値 42", result)
 		}
 	})
 }
@@ -206,11 +206,11 @@ func TestFormatParameterStruct(t *testing.T) {
 		s := testStructWithID{ID: 1, Name: "test"}
 		result := formatParameter(s)
 		if result == nil {
-			t.Error("formatParameter(struct) should not return nil")
+			t.Error("formatParameter(struct)はnilを返すべきではない")
 		}
 		if m, ok := result.(map[string]interface{}); ok {
 			if m["ID"] != 1 || m["Name"] != "test" {
-				t.Errorf("formatParameter(struct) = %v, want ID=1, Name=test", m)
+				t.Errorf("formatParameter(struct) = %v, 期待値 ID=1, Name=test", m)
 			}
 		}
 	})
@@ -220,7 +220,7 @@ func TestFormatParameterStruct(t *testing.T) {
 		result := formatParameter(s)
 		if m, ok := result.(map[string]interface{}); ok {
 			if m["Title"] != "My Title" || m["Status"] != "active" {
-				t.Errorf("formatParameter(struct) = %v", m)
+				t.Errorf("formatParameter(struct)の値が不正 = %v", m)
 			}
 		}
 	})
@@ -230,7 +230,7 @@ func TestFormatParameterStruct(t *testing.T) {
 		result := formatParameter(s)
 		if m, ok := result.(map[string]interface{}); ok {
 			if m["Code"] != "ABC" || m["Type"] != "test" {
-				t.Errorf("formatParameter(struct) = %v", m)
+				t.Errorf("formatParameter(struct)の値が不正 = %v", m)
 			}
 		}
 	})
@@ -240,10 +240,10 @@ func TestFormatParameterStruct(t *testing.T) {
 		result := formatParameter(s)
 		if str, ok := result.(string); ok {
 			if str != "<testStructEmpty>" {
-				t.Errorf("formatParameter(struct) = %v, want <testStructEmpty>", str)
+				t.Errorf("formatParameter(struct) = %v, 期待値 <testStructEmpty>", str)
 			}
 		} else {
-			t.Errorf("formatParameter(struct) should return string for struct without known fields")
+			t.Errorf("formatParameter(struct)は既知フィールドを持たない構造体に対して文字列を返すべき")
 		}
 	})
 
@@ -251,7 +251,7 @@ func TestFormatParameterStruct(t *testing.T) {
 		s := &testStructWithID{ID: 2, Name: "pointer"}
 		result := formatParameter(s)
 		if result == nil {
-			t.Error("formatParameter(*struct) should not return nil")
+			t.Error("formatParameter(*struct)はnilを返すべきではない")
 		}
 	})
 }
@@ -262,7 +262,7 @@ func TestFormatParameterOtherTypes(t *testing.T) {
 		result := formatParameter(s)
 		if str, ok := result.(string); ok {
 			if str != "<[]int>" {
-				t.Errorf("formatParameter(slice) = %v, want <[]int>", str)
+				t.Errorf("formatParameter(slice) = %v, 期待値 <[]int>", str)
 			}
 		}
 	})
@@ -272,7 +272,7 @@ func TestFormatParameterOtherTypes(t *testing.T) {
 		result := formatParameter(m)
 		if str, ok := result.(string); ok {
 			if str != "<map[string]int>" {
-				t.Errorf("formatParameter(map) = %v, want <map[string]int>", str)
+				t.Errorf("formatParameter(map) = %v, 期待値 <map[string]int>", str)
 			}
 		}
 	})
@@ -282,7 +282,7 @@ func TestFormatParameterOtherTypes(t *testing.T) {
 		result := formatParameter(ch)
 		if str, ok := result.(string); ok {
 			if str != "<chan int>" {
-				t.Errorf("formatParameter(chan) = %v, want <chan int>", str)
+				t.Errorf("formatParameter(chan) = %v, 期待値 <chan int>", str)
 			}
 		}
 	})
@@ -291,7 +291,7 @@ func TestFormatParameterOtherTypes(t *testing.T) {
 		fn := func() {}
 		result := formatParameter(fn)
 		if result == nil {
-			t.Error("formatParameter(func) should not return nil")
+			t.Error("formatParameter(func)はnilを返すべきではない")
 		}
 	})
 }
