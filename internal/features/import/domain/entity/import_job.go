@@ -130,12 +130,49 @@ func (j *ImportJob) IsTerminal() bool {
 	return j.Status == ImportStatusCompleted || j.Status == ImportStatusFailed || j.Status == ImportStatusPartiallyCompleted
 }
 
+// IsRunning はジョブが実行中かどうかを判定する
+func (j *ImportJob) IsRunning() bool {
+	return j.Status == ImportStatusProcessing
+}
+
+// Start はジョブを開始する
+func (j *ImportJob) Start() {
+	_ = j.TransitionTo(ImportStatusProcessing)
+}
+
+// Complete はジョブを完了する
+func (j *ImportJob) Complete() {
+	_ = j.TransitionTo(ImportStatusCompleted)
+}
+
+// Fail はジョブを失敗状態にする
+func (j *ImportJob) Fail(message string) {
+	j.ErrorMessage = &message
+	_ = j.TransitionTo(ImportStatusFailed)
+}
+
+// PartialComplete はジョブを部分完了状態にする
+func (j *ImportJob) PartialComplete() {
+	_ = j.TransitionTo(ImportStatusPartiallyCompleted)
+}
+
+// Duration はジョブの実行時間を返す
+func (j *ImportJob) Duration() *time.Duration {
+	if j.StartedAt == nil || j.CompletedAt == nil {
+		return nil
+	}
+	d := j.CompletedAt.Sub(*j.StartedAt)
+	return &d
+}
+
 // Progress は進捗率を返す(0-100)
+// 処理済み + 失敗を合計した完了分で計算する
 func (j *ImportJob) Progress() float64 {
 	if j.TotalRecords == nil || *j.TotalRecords == 0 {
 		return 0
 	}
-	return float64(j.ProcessedRecords) / float64(*j.TotalRecords) * 100
+	completed := j.ProcessedRecords + j.FailedRecords
+	return float64(completed) / float64(*j.TotalRecords) * 100
 }
 
 // FailedRecordIDsJSON は失敗したレコードIDをJSON形式で返す
