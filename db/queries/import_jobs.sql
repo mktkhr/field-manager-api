@@ -76,9 +76,9 @@ INSERT INTO import_jobs (
 -- インポートジョブのステータスを更新
 UPDATE import_jobs
 SET
-    status = $2,
-    started_at = CASE WHEN $2 = 'processing' AND started_at IS NULL THEN NOW() ELSE started_at END,
-    completed_at = CASE WHEN $2 IN ('completed', 'failed', 'partially_completed') THEN NOW() ELSE completed_at END
+    status = sqlc.arg(status)::VARCHAR,
+    started_at = CASE WHEN sqlc.arg(status)::VARCHAR = 'processing' AND started_at IS NULL THEN NOW() ELSE started_at END,
+    completed_at = CASE WHEN sqlc.arg(status)::VARCHAR IN ('completed', 'failed', 'partially_completed') THEN NOW() ELSE completed_at END
 WHERE id = $1
 RETURNING *;
 

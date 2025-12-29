@@ -111,6 +111,7 @@ DELETE FROM fields WHERE id = $1;
 
 -- name: UpsertField :one
 -- 圃場をUPSERT(wagriインポート用)
+-- geometry, centroidはWKB形式のbytea型で受け取り、ST_GeomFromWKBで変換
 INSERT INTO fields (
     id,
     geometry,
@@ -122,7 +123,10 @@ INSERT INTO fields (
     city_code,
     soil_type_id
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    @id,
+    ST_GeomFromWKB(@geometry_wkb::bytea, 4326),
+    ST_GeomFromWKB(@centroid_wkb::bytea, 4326),
+    @h3_index_res3, @h3_index_res5, @h3_index_res7, @h3_index_res9, @city_code, @soil_type_id
 )
 ON CONFLICT (id) DO UPDATE SET
     geometry = EXCLUDED.geometry,
