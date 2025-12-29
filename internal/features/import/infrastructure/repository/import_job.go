@@ -11,6 +11,9 @@ import (
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
 )
 
+// jsonMarshal はテスト時にモック可能なJSON Marshal関数
+var jsonMarshal = json.Marshal
+
 // importJobRepository はImportJobRepositoryの実装
 type importJobRepository struct {
 	db      *pgxpool.Pool
@@ -99,7 +102,7 @@ func (r *importJobRepository) UpdateTotalRecords(ctx context.Context, id uuid.UU
 func (r *importJobRepository) UpdateError(ctx context.Context, id uuid.UUID, message string, failedIDs []string) error {
 	var failedIDsJSON json.RawMessage
 	if len(failedIDs) > 0 {
-		data, err := json.Marshal(failedIDs)
+		data, err := jsonMarshal(failedIDs)
 		if err != nil {
 			return err
 		}

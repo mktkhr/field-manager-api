@@ -13,9 +13,16 @@ import (
 	"github.com/mktkhr/field-manager-api/internal/features/import/application/port"
 )
 
+// sfnAPI はStep Functions操作のインターフェース
+type sfnAPI interface {
+	StartExecution(ctx context.Context, params *sfn.StartExecutionInput, optFns ...func(*sfn.Options)) (*sfn.StartExecutionOutput, error)
+	DescribeExecution(ctx context.Context, params *sfn.DescribeExecutionInput, optFns ...func(*sfn.Options)) (*sfn.DescribeExecutionOutput, error)
+	StopExecution(ctx context.Context, params *sfn.StopExecutionInput, optFns ...func(*sfn.Options)) (*sfn.StopExecutionOutput, error)
+}
+
 // stepFunctionsClient はStepFunctionsClientの実装
 type stepFunctionsClient struct {
-	client          *sfn.Client
+	api             sfnAPI
 	stateMachineArn string
 }
 
@@ -26,8 +33,12 @@ func NewStepFunctionsClient(ctx context.Context, cfg *appConfig.AWSConfig) (port
 	}
 
 	if cfg.LocalStackEnabled {
+		// LocalStack互換性のため deprecated API を使用
+		//nolint:staticcheck
 		opts = append(opts, config.WithEndpointResolverWithOptions(
+			//nolint:staticcheck
 			aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				//nolint:staticcheck
 				return aws.Endpoint{
 					URL:               cfg.LocalStackURL,
 					HostnameImmutable: true,
@@ -42,7 +53,7 @@ func NewStepFunctionsClient(ctx context.Context, cfg *appConfig.AWSConfig) (port
 	}
 
 	return &stepFunctionsClient{
-		client:          sfn.NewFromConfig(awsCfg),
+		api:             sfn.NewFromConfig(awsCfg),
 		stateMachineArn: cfg.StepFunctionsARN,
 	}, nil
 }
@@ -56,7 +67,7 @@ func (c *stepFunctionsClient) StartExecution(ctx context.Context, input port.Wor
 
 	name := fmt.Sprintf("import-%s-%d", input.CityCode, time.Now().UnixNano())
 
-	output, err := c.client.StartExecution(ctx, &sfn.StartExecutionInput{
+	output, err := c.api.StartExecution(ctx, &sfn.StartExecutionInput{
 		StateMachineArn: aws.String(c.stateMachineArn),
 		Name:            aws.String(name),
 		Input:           aws.String(string(inputJSON)),
@@ -73,7 +84,7 @@ func (c *stepFunctionsClient) StartExecution(ctx context.Context, input port.Wor
 
 // GetExecutionStatus はワークフローの実行状態を取得する
 func (c *stepFunctionsClient) GetExecutionStatus(ctx context.Context, executionArn string) (string, error) {
-	output, err := c.client.DescribeExecution(ctx, &sfn.DescribeExecutionInput{
+	output, err := c.api.DescribeExecution(ctx, &sfn.DescribeExecutionInput{
 		ExecutionArn: aws.String(executionArn),
 	})
 	if err != nil {
@@ -85,7 +96,7 @@ func (c *stepFunctionsClient) GetExecutionStatus(ctx context.Context, executionA
 
 // StopExecution はワークフローの実行を停止する
 func (c *stepFunctionsClient) StopExecution(ctx context.Context, executionArn string, cause string) error {
-	_, err := c.client.StopExecution(ctx, &sfn.StopExecutionInput{
+	_, err := c.api.StopExecution(ctx, &sfn.StopExecutionInput{
 		ExecutionArn: aws.String(executionArn),
 		Cause:        aws.String(cause),
 	})

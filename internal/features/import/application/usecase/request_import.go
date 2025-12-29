@@ -60,10 +60,8 @@ func (uc *RequestImportUseCase) Execute(ctx context.Context, input RequestImport
 
 	execution, err := uc.sfnClient.StartExecution(ctx, workflowInput)
 	if err != nil {
-		// ワークフロー開始失敗時はジョブを失敗状態に更新
-		if updateErr := uc.importJobRepo.UpdateStatus(ctx, job.ID, entity.ImportStatusFailed); updateErr != nil {
-			// ログに記録するなどの処理が本来必要
-		}
+		// ワークフロー開始失敗時はジョブを失敗状態に更新(エラーは無視)
+		_ = uc.importJobRepo.UpdateStatus(ctx, job.ID, entity.ImportStatusFailed)
 		return nil, apperror.InternalErrorWithCause("ワークフローの開始に失敗しました", err)
 	}
 

@@ -68,7 +68,9 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 		uc.handleError(ctx, input.ImportJobID, "S3からの読み取りに失敗しました", err)
 		return apperror.InternalErrorWithCause("S3からの読み取りに失敗しました", err)
 	}
-	defer reader.Close()
+	defer func() {
+		_ = reader.Close()
+	}()
 
 	// 2. JSONをストリーミングパース
 	decoder := json.NewDecoder(reader)

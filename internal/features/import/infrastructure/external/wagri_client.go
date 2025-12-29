@@ -68,7 +68,9 @@ func (c *wagriClient) FetchFieldsByCityCodeToStream(ctx context.Context, cityCod
 	if err != nil {
 		return nil, fmt.Errorf("API呼び出しに失敗: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("APIエラー: ステータスコード %d", resp.StatusCode)
