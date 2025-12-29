@@ -20,7 +20,7 @@ func TestNewRequestLoggerFromGin(t *testing.T) {
 
 		logger := NewRequestLoggerFromGin(c)
 		if logger == nil {
-			t.Error("NewRequestLoggerFromGin() should not return nil")
+			t.Error("NewRequestLoggerFromGin()はnilを返すべきではない")
 		}
 	})
 
@@ -31,7 +31,7 @@ func TestNewRequestLoggerFromGin(t *testing.T) {
 
 		logger := NewRequestLoggerFromGin(c)
 		if logger == nil {
-			t.Error("NewRequestLoggerFromGin() should not return nil")
+			t.Error("NewRequestLoggerFromGin()はnilを返すべきではない")
 		}
 	})
 
@@ -43,7 +43,7 @@ func TestNewRequestLoggerFromGin(t *testing.T) {
 
 		logger := NewRequestLoggerFromGin(c)
 		if logger == nil {
-			t.Error("NewRequestLoggerFromGin() should not return nil")
+			t.Error("NewRequestLoggerFromGin()はnilを返すべきではない")
 		}
 	})
 
@@ -57,7 +57,7 @@ func TestNewRequestLoggerFromGin(t *testing.T) {
 
 		logger := NewRequestLoggerFromGin(c)
 		if logger == nil {
-			t.Error("NewRequestLoggerFromGin() should not return nil")
+			t.Error("NewRequestLoggerFromGin()はnilを返すべきではない")
 		}
 	})
 }
