@@ -47,8 +47,10 @@ func (r *FieldLandRegistry) SetAddress(address string) {
 
 // SetAreaSqm は面積を設定する
 func (r *FieldLandRegistry) SetAreaSqm(area int) {
-	a := int32(area)
-	r.AreaSqm = &a
+	if area != 0 {
+		a := int32(area)
+		r.AreaSqm = &a
+	}
 }
 
 // SetLandCategoryCode は土地種別コードを設定する

@@ -2,22 +2,26 @@ package repository
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/repository"
 	importEntity "github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
+	"github.com/twpayne/go-geom"
+	"github.com/twpayne/go-geom/encoding/wkb"
 )
 
 // fieldRepository はFieldRepositoryの実装
 type fieldRepository struct {
-	db          *pgxpool.Pool
-	queries     *sqlc.Queries
-	masterRepo  repository.MasterRepository
+	db           *pgxpool.Pool
+	queries      *sqlc.Queries
+	masterRepo   repository.MasterRepository
 	registryRepo repository.FieldLandRegistryRepository
 }
 
@@ -73,10 +77,11 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 	if err != nil {
 		return fmt.Errorf("トランザクション開始に失敗: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	queries := sqlc.New(tx)
-	fieldIDs := make([]uuid.UUID, 0, len(features))
 
 	for _, feature := range features {
 		// 1. 土壌タイプをUPSERT
@@ -116,7 +121,6 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 		if err != nil {
 			return fmt.Errorf("圃場ID変換失敗: %w", err)
 		}
-		fieldIDs = append(fieldIDs, fieldID)
 
 		// LinearPolygon -> Polygon変換
 		var geometryCoords [][]float64
@@ -134,11 +138,21 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 			field.SetSoilType(*soilTypeID)
 		}
 
+		// GeometryをWKB形式に変換
+		geometryWKB, err := geometryToWKB(field.Geometry)
+		if err != nil {
+			return fmt.Errorf("geometry WKB変換失敗: %w", err)
+		}
+		centroidWKB, err := geometryToWKB(field.Centroid)
+		if err != nil {
+			return fmt.Errorf("centroid WKB変換失敗: %w", err)
+		}
+
 		// UpsertFieldを実行
 		_, err = queries.UpsertField(ctx, &sqlc.UpsertFieldParams{
 			ID:          field.ID,
-			Geometry:    field.Geometry,
-			Centroid:    field.Centroid,
+			GeometryWkb: geometryWKB,
+			CentroidWkb: centroidWKB,
 			H3IndexRes3: field.H3IndexRes3,
 			H3IndexRes5: field.H3IndexRes5,
 			H3IndexRes7: field.H3IndexRes7,
@@ -150,8 +164,8 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 			return fmt.Errorf("圃場UPSERT失敗: %w", err)
 		}
 
-		// 4. 農地台帳をREPLACE
-		if err := r.registryRepo.DeleteByFieldID(ctx, fieldID); err != nil {
+		// 4. 農地台帳をREPLACE(tx内で直接実行)
+		if err := queries.DeleteFieldLandRegistriesByFieldID(ctx, fieldID); err != nil {
 			return fmt.Errorf("農地台帳削除失敗: %w", err)
 		}
 
@@ -164,7 +178,23 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 			registry.SetIdleLandStatusCode(pinInfo.IsIdleAgriculturalLandCode)
 			registry.SetDescriptiveStudyData(pinInfo.ParseDescriptiveStudyData())
 
-			if err := r.registryRepo.Create(ctx, registry); err != nil {
+			var descriptiveStudyData pgtype.Date
+			if registry.DescriptiveStudyData != nil {
+				descriptiveStudyData = pgtype.Date{
+					Time:  *registry.DescriptiveStudyData,
+					Valid: true,
+				}
+			}
+
+			if _, err := queries.CreateFieldLandRegistry(ctx, &sqlc.CreateFieldLandRegistryParams{
+				FieldID:              registry.FieldID,
+				FarmerNumber:         registry.FarmerNumber,
+				Address:              registry.Address,
+				AreaSqm:              registry.AreaSqm,
+				LandCategoryCode:     registry.LandCategoryCode,
+				IdleLandStatusCode:   registry.IdleLandStatusCode,
+				DescriptiveStudyData: descriptiveStudyData,
+			}); err != nil {
 				return fmt.Errorf("農地台帳作成失敗: %w", err)
 			}
 		}
@@ -219,4 +249,41 @@ func uuidToNullUUID(id *uuid.UUID) uuid.NullUUID {
 		return uuid.NullUUID{Valid: false}
 	}
 	return uuid.NullUUID{UUID: *id, Valid: true}
+}
+
+// geometryToWKB はgeom.TをWKB形式のバイト列に変換する
+func geometryToWKB(g geom.T) ([]byte, error) {
+	if g == nil {
+		return nil, nil
+	}
+
+	// nilポインタチェック(interface{}としてnilでない場合も考慮)
+	switch v := g.(type) {
+	case *geom.Point:
+		if v == nil {
+			return nil, nil
+		}
+	case *geom.Polygon:
+		if v == nil {
+			return nil, nil
+		}
+	case *geom.LineString:
+		if v == nil {
+			return nil, nil
+		}
+	case *geom.MultiPoint:
+		if v == nil {
+			return nil, nil
+		}
+	case *geom.MultiPolygon:
+		if v == nil {
+			return nil, nil
+		}
+	case *geom.MultiLineString:
+		if v == nil {
+			return nil, nil
+		}
+	}
+
+	return wkb.Marshal(g, binary.LittleEndian)
 }
