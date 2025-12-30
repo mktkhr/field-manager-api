@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/caarlos0/env/v10"
 	"github.com/google/uuid"
 	"github.com/mktkhr/field-manager-api/internal/config"
 	"github.com/mktkhr/field-manager-api/internal/features/import/infrastructure/external"
@@ -26,12 +25,6 @@ type Output struct {
 	S3Key       string    `json:"s3_key"`
 	ImportJobID uuid.UUID `json:"import_job_id"`
 	CityCode    string    `json:"city_code"`
-}
-
-// WagriConfig はwagri API設定
-type WagriConfig struct {
-	BaseURL string `env:"WAGRI_BASE_URL" envDefault:"https://api.wagri.net"`
-	APIKey  string `env:"WAGRI_API_KEY"`
 }
 
 func main() {
@@ -53,11 +46,11 @@ func handler(ctx context.Context, event Event) (*Output, error) {
 		return nil, fmt.Errorf("AWS設定の読み込みに失敗: %w", err)
 	}
 
-	// wagri設定読み込み
-	wagriCfg := &WagriConfig{}
-	if err := env.Parse(wagriCfg); err != nil {
-		slog.Error("wagri設定の読み込みに失敗", "error", err)
-		return nil, fmt.Errorf("wagri設定の読み込みに失敗: %w", err)
+	// Wagri設定読み込み
+	wagriCfg, err := config.LoadWagriConfig()
+	if err != nil {
+		slog.Error("Wagri設定の読み込みに失敗", "error", err)
+		return nil, fmt.Errorf("Wagri設定の読み込みに失敗: %w", err)
 	}
 
 	// S3クライアント作成
@@ -67,20 +60,17 @@ func handler(ctx context.Context, event Event) (*Output, error) {
 		return nil, fmt.Errorf("S3クライアントの作成に失敗: %w", err)
 	}
 
-	// wagriクライアント作成
-	wagriClient := external.NewWagriClient(&external.WagriConfig{
-		BaseURL: wagriCfg.BaseURL,
-		APIKey:  wagriCfg.APIKey,
-	})
+	// Wagriクライアント作成
+	wagriClient := external.NewWagriClient(wagriCfg)
 
-	// wagri APIから圃場データを取得
-	slog.Info("wagri API呼び出し開始", "city_code", event.CityCode)
+	// Wagri APIから圃場データを取得
+	slog.Info("Wagri API呼び出し開始", "city_code", event.CityCode)
 	data, err := wagriClient.FetchFieldsByCityCodeToStream(ctx, event.CityCode)
 	if err != nil {
-		slog.Error("wagri API呼び出しに失敗", "error", err, "city_code", event.CityCode)
-		return nil, fmt.Errorf("wagri API呼び出しに失敗: %w", err)
+		slog.Error("Wagri API呼び出しに失敗", "error", err, "city_code", event.CityCode)
+		return nil, fmt.Errorf("Wagri API呼び出しに失敗: %w", err)
 	}
-	slog.Info("wagri API呼び出し完了", "size_bytes", len(data))
+	slog.Info("Wagri API呼び出し完了", "size_bytes", len(data))
 
 	// S3キー生成
 	timestamp := time.Now().UTC().Format("20060102T150405Z")
