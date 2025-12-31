@@ -39,25 +39,25 @@ func main() {
 func handler(ctx context.Context, event Event) (*Output, error) {
 	slog.Info("wagri-fetcher開始", "city_code", event.CityCode, "import_job_id", event.ImportJobID)
 
-	// AWS設定読み込み
-	awsCfg, err := config.LoadAWSConfig()
+	// Storage設定読み込み
+	storageCfg, err := config.LoadStorageConfig()
 	if err != nil {
-		slog.Error("AWS設定の読み込みに失敗", "error", err)
-		return nil, fmt.Errorf("AWS設定の読み込みに失敗: %w", err)
+		slog.Error("Storage設定の読み込みに失敗", "error", err)
+		return nil, fmt.Errorf("storage設定の読み込みに失敗: %w", err)
 	}
 
 	// Wagri設定読み込み
 	wagriCfg, err := config.LoadWagriConfig()
 	if err != nil {
 		slog.Error("Wagri設定の読み込みに失敗", "error", err)
-		return nil, fmt.Errorf("Wagri設定の読み込みに失敗: %w", err)
+		return nil, fmt.Errorf("wagri設定の読み込みに失敗: %w", err)
 	}
 
-	// S3クライアント作成
-	s3Client, err := external.NewS3Client(ctx, awsCfg)
+	// S3クライアント作成(StorageConfigで切り替え)
+	s3Client, err := external.NewS3ClientFromStorageConfig(ctx, storageCfg)
 	if err != nil {
 		slog.Error("S3クライアントの作成に失敗", "error", err)
-		return nil, fmt.Errorf("S3クライアントの作成に失敗: %w", err)
+		return nil, fmt.Errorf("s3クライアントの作成に失敗: %w", err)
 	}
 
 	// Wagriクライアント作成
@@ -68,7 +68,7 @@ func handler(ctx context.Context, event Event) (*Output, error) {
 	data, err := wagriClient.FetchFieldsByCityCodeToStream(ctx, event.CityCode)
 	if err != nil {
 		slog.Error("Wagri API呼び出しに失敗", "error", err, "city_code", event.CityCode)
-		return nil, fmt.Errorf("Wagri API呼び出しに失敗: %w", err)
+		return nil, fmt.Errorf("wagri API呼び出しに失敗: %w", err)
 	}
 	slog.Info("Wagri API呼び出し完了", "size_bytes", len(data))
 
