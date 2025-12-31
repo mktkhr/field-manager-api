@@ -87,6 +87,33 @@ air-install: ## airのインストール
 dev: air-install ## 開発サーバー起動(ホットリロード)
 	@air -c .air.toml
 
+arch-check: ## アーキテクチャ検証(Feature間依存チェック)
+	@echo "🏗️ Feature間依存チェックを実行中..."
+	@FEATURES=$$(ls -d internal/features/*/ 2>/dev/null | xargs -n1 basename | grep -v shared); \
+	VIOLATIONS=0; \
+	for feature in $$FEATURES; do \
+		for other in $$FEATURES; do \
+			if [ "$$feature" != "$$other" ]; then \
+				FOUND=$$(grep -r "features/$$other" internal/features/$$feature --include="*.go" 2>/dev/null | grep -v "_test.go" || true); \
+				if [ -n "$$FOUND" ]; then \
+					echo ""; \
+					echo "❌ $$feature -> $$other への直接依存を検出:"; \
+					echo "$$FOUND" | head -5; \
+					VIOLATIONS=$$((VIOLATIONS + 1)); \
+				fi; \
+			fi; \
+		done; \
+	done; \
+	if [ $$VIOLATIONS -gt 0 ]; then \
+		echo ""; \
+		echo "⚠️  Feature間の直接依存が検出されました。"; \
+		echo "   Consumer側でインターフェースを定義し、Application層で型変換を行ってください。"; \
+		echo "   (shared機能への依存は許可されます)"; \
+		exit 1; \
+	else \
+		echo "✅ Feature間の直接依存はありません"; \
+	fi
+
 gosec-install: ## Gosecのインストール
 	@echo "Installing gosec..."
 	@go install github.com/securego/gosec/v2/cmd/gosec@latest
@@ -278,4 +305,4 @@ import-processor-run: ## import-processorをローカル実行 (S3_KEY=xxx IMPOR
 		--s3-key $(S3_KEY) \
 		--import-job-id $(IMPORT_JOB_ID)
 
-.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean gosec-install gosec-scan sqlc-install sqlc-generate generate migrate-install migrate-create migrate-up migrate-up-one migrate-down migrate-down-all migrate-force migrate-version migrate-status localstack-up localstack-logs localstack-status localstack-build-lambda localstack-deploy-lambda localstack-invoke-lambda localstack-start-workflow localstack-list-executions import-processor-build import-processor-run
+.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean arch-check gosec-install gosec-scan sqlc-install sqlc-generate generate migrate-install migrate-create migrate-up migrate-up-one migrate-down migrate-down-all migrate-force migrate-version migrate-status localstack-up localstack-logs localstack-status localstack-build-lambda localstack-deploy-lambda localstack-invoke-lambda localstack-start-workflow localstack-list-executions import-processor-build import-processor-run
