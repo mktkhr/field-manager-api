@@ -80,9 +80,7 @@ func run(ctx context.Context, importJobID uuid.UUID, s3Key string, batchSize int
 
 	// リポジトリ作成
 	importJobRepository := importRepo.NewImportJobRepository(pool)
-	masterRepository := fieldRepo.NewMasterRepository(pool)
-	registryRepository := fieldRepo.NewFieldLandRegistryRepository(pool)
-	fieldRepository := fieldRepo.NewFieldRepository(pool, masterRepository, registryRepository)
+	fieldRepository := fieldRepo.NewFieldRepository(pool)
 
 	// ユースケース作成
 	processImportUC := usecase.NewProcessImportUseCase(

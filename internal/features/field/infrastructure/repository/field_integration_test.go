@@ -60,9 +60,7 @@ func cleanupTestData(t *testing.T, ctx context.Context) {
 }
 
 func TestNewFieldRepository_Integration(t *testing.T) {
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	if repo == nil {
 		t.Error("NewFieldRepository() returned nil")
@@ -71,9 +69,7 @@ func TestNewFieldRepository_Integration(t *testing.T) {
 
 func TestFieldRepository_Create_Integration(t *testing.T) {
 	ctx := context.Background()
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	field := entity.NewField(uuid.New(), "163210")
 
@@ -86,9 +82,7 @@ func TestFieldRepository_Create_Integration(t *testing.T) {
 
 func TestFieldRepository_Update_Integration(t *testing.T) {
 	ctx := context.Background()
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	field := entity.NewField(uuid.New(), "163210")
 
@@ -101,9 +95,7 @@ func TestFieldRepository_Update_Integration(t *testing.T) {
 
 func TestFieldRepository_Upsert_Integration(t *testing.T) {
 	ctx := context.Background()
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	field := entity.NewField(uuid.New(), "163210")
 
@@ -118,9 +110,7 @@ func TestFieldRepository_Delete_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	// 存在しないIDでの削除（エラーにはならない）
 	err := repo.Delete(ctx, uuid.New())
@@ -133,9 +123,7 @@ func TestFieldRepository_FindByID_NotFound_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	// 存在しないIDで検索
 	_, err := repo.FindByID(ctx, uuid.New())
@@ -149,9 +137,7 @@ func TestFieldRepository_UpsertBatch_EmptyFeatures_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	// 空の入力リストでUpsertBatch
 	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{})
@@ -165,9 +151,7 @@ func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID := uuid.New()
 	input := types.FieldBatchInput{
@@ -207,9 +191,7 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID := uuid.New()
 	input := types.FieldBatchInput{
@@ -254,9 +236,7 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID := uuid.New()
 	descriptiveStudyDataRaw := "2024-01-15"
@@ -308,9 +288,7 @@ func TestFieldRepository_UpsertBatch_InvalidFieldID_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	input := types.FieldBatchInput{
 		ID:       "invalid-uuid",
@@ -340,9 +318,7 @@ func TestFieldRepository_UpsertBatch_InvalidGeometry_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID := uuid.New()
 	input := types.FieldBatchInput{
@@ -371,9 +347,7 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID1 := uuid.New()
 	fieldID2 := uuid.New()
@@ -441,9 +415,7 @@ func TestFieldRepository_UpsertBatch_UpdateExisting_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID := uuid.New()
 	input := types.FieldBatchInput{
@@ -488,9 +460,7 @@ func TestFieldRepository_FindByID_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	_, err := repo.FindByID(ctx, uuid.New())
 	if err == nil {
@@ -502,9 +472,7 @@ func TestFieldRepository_Delete_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	err := repo.Delete(ctx, uuid.New())
 	if err == nil {
@@ -517,9 +485,7 @@ func TestFieldRepository_UpsertBatch_TransactionError_Integration(t *testing.T) 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	input := types.FieldBatchInput{
 		ID:       uuid.New().String(),
@@ -541,9 +507,7 @@ func TestFieldRepository_UpsertBatch_EmptyGeometry_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID := uuid.New()
 	input := types.FieldBatchInput{
@@ -566,9 +530,7 @@ func TestFieldRepository_UpsertBatch_TwoPointsGeometry_Integration(t *testing.T)
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	masterRepo := NewMasterRepository(testDB)
-	registryRepo := NewFieldLandRegistryRepository(testDB)
-	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
+	repo := NewFieldRepository(testDB)
 
 	fieldID := uuid.New()
 	// 2点だけのポリゴン - geom.SetCoordsでエラーになるはず

@@ -19,23 +19,15 @@ import (
 
 // fieldRepository はFieldRepositoryの実装
 type fieldRepository struct {
-	db           *pgxpool.Pool
-	queries      *sqlc.Queries
-	masterRepo   repository.MasterRepository
-	registryRepo repository.FieldLandRegistryRepository
+	db      *pgxpool.Pool
+	queries *sqlc.Queries
 }
 
 // NewFieldRepository は新しいFieldRepositoryを作成する
-func NewFieldRepository(
-	db *pgxpool.Pool,
-	masterRepo repository.MasterRepository,
-	registryRepo repository.FieldLandRegistryRepository,
-) repository.FieldRepository {
+func NewFieldRepository(db *pgxpool.Pool) repository.FieldRepository {
 	return &fieldRepository{
-		db:           db,
-		queries:      sqlc.New(db),
-		masterRepo:   masterRepo,
-		registryRepo: registryRepo,
+		db:      db,
+		queries: sqlc.New(db),
 	}
 }
 
@@ -84,33 +76,36 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []types.FieldB
 	queries := sqlc.New(tx)
 
 	for _, input := range inputs {
-		// 1. 土壌タイプをUPSERT
+		// 1. 土壌タイプをUPSERT(トランザクション内で直接実行)
 		var soilTypeID *uuid.UUID
 		if input.HasSoilType() {
-			soilType := entity.NewSoilType(
-				input.SoilType.LargeCode,
-				input.SoilType.MiddleCode,
-				input.SoilType.SmallCode,
-				input.SoilType.SmallName,
-			)
-			id, err := r.masterRepo.UpsertSoilType(ctx, soilType)
+			row, err := queries.UpsertSoilType(ctx, &sqlc.UpsertSoilTypeParams{
+				LargeCode:  input.SoilType.LargeCode,
+				MiddleCode: input.SoilType.MiddleCode,
+				SmallCode:  input.SoilType.SmallCode,
+				SmallName:  input.SoilType.SmallName,
+			})
 			if err != nil {
 				return fmt.Errorf("土壌タイプUPSERT失敗: %w", err)
 			}
-			soilTypeID = id
+			soilTypeID = &row.ID
 		}
 
-		// 2. PinInfoからマスタデータをUPSERT
+		// 2. PinInfoからマスタデータをUPSERT(トランザクション内で直接実行)
 		for _, pinInfo := range input.PinInfoList {
 			if pinInfo.LandCategoryCode != "" {
-				landCategory := entity.NewLandCategory(pinInfo.LandCategoryCode, pinInfo.LandCategory)
-				if err := r.masterRepo.UpsertLandCategory(ctx, landCategory); err != nil {
+				if _, err := queries.UpsertLandCategory(ctx, &sqlc.UpsertLandCategoryParams{
+					Code: pinInfo.LandCategoryCode,
+					Name: pinInfo.LandCategory,
+				}); err != nil {
 					return fmt.Errorf("土地種別UPSERT失敗: %w", err)
 				}
 			}
 			if pinInfo.IdleLandStatusCode != "" {
-				idleStatus := entity.NewIdleLandStatus(pinInfo.IdleLandStatusCode, pinInfo.IdleLandStatus)
-				if err := r.masterRepo.UpsertIdleLandStatus(ctx, idleStatus); err != nil {
+				if _, err := queries.UpsertIdleLandStatus(ctx, &sqlc.UpsertIdleLandStatusParams{
+					Code: pinInfo.IdleLandStatusCode,
+					Name: pinInfo.IdleLandStatus,
+				}); err != nil {
 					return fmt.Errorf("遊休農地状況UPSERT失敗: %w", err)
 				}
 			}
