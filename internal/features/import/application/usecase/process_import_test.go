@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	fieldEntity "github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
+	"github.com/mktkhr/field-manager-api/internal/features/shared/types"
 )
 
 // mockStorageClient はStorageClientのモック実装
@@ -48,7 +48,7 @@ type mockFieldRepository struct {
 	err error
 }
 
-func (m *mockFieldRepository) UpsertBatch(ctx context.Context, inputs []fieldEntity.FieldBatchInput) error {
+func (m *mockFieldRepository) UpsertBatch(ctx context.Context, inputs []types.FieldBatchInput) error {
 	return m.err
 }
 

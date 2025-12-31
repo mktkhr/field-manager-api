@@ -8,10 +8,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mktkhr/field-manager-api/internal/apperror"
-	fieldEntity "github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/import/application/port"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/repository"
+	"github.com/mktkhr/field-manager-api/internal/features/shared/types"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 // FieldRepository はField操作用のリポジトリインターフェース(Consumer側で定義)
 type FieldRepository interface {
 	// UpsertBatch は圃場をバッチでUPSERTする
-	UpsertBatch(ctx context.Context, inputs []fieldEntity.FieldBatchInput) error
+	UpsertBatch(ctx context.Context, inputs []types.FieldBatchInput) error
 }
 
 // ProcessImportInput はインポート処理の入力
@@ -220,8 +220,8 @@ func (uc *ProcessImportUseCase) processBatch(ctx context.Context, batch []entity
 }
 
 // convertWagriFeaturesToFieldBatchInputs はWagriFeatureをFieldBatchInputに変換する
-func convertWagriFeaturesToFieldBatchInputs(features []entity.WagriFeature) []fieldEntity.FieldBatchInput {
-	inputs := make([]fieldEntity.FieldBatchInput, len(features))
+func convertWagriFeaturesToFieldBatchInputs(features []entity.WagriFeature) []types.FieldBatchInput {
+	inputs := make([]types.FieldBatchInput, len(features))
 	for i, feature := range features {
 		inputs[i] = convertWagriFeatureToFieldBatchInput(feature)
 	}
@@ -229,11 +229,11 @@ func convertWagriFeaturesToFieldBatchInputs(features []entity.WagriFeature) []fi
 }
 
 // convertWagriFeatureToFieldBatchInput は単一のWagriFeatureをFieldBatchInputに変換する
-func convertWagriFeatureToFieldBatchInput(feature entity.WagriFeature) fieldEntity.FieldBatchInput {
-	input := fieldEntity.FieldBatchInput{
+func convertWagriFeatureToFieldBatchInput(feature entity.WagriFeature) types.FieldBatchInput {
+	input := types.FieldBatchInput{
 		ID:       feature.Properties.ID,
 		CityCode: feature.Properties.CityCode,
-		Geometry: fieldEntity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Coordinates: feature.Geometry.Coordinates,
 			Type:        feature.Geometry.Type,
 		},
@@ -241,7 +241,7 @@ func convertWagriFeatureToFieldBatchInput(feature entity.WagriFeature) fieldEnti
 
 	// 土壌タイプ情報を変換
 	if feature.Properties.HasSoilType() {
-		input.SoilType = &fieldEntity.FieldBatchSoilType{
+		input.SoilType = &types.FieldBatchSoilType{
 			LargeCode:  feature.Properties.SoilLargeCode,
 			MiddleCode: feature.Properties.SoilMiddleCode,
 			SmallCode:  feature.Properties.SoilSmallCode,
@@ -251,9 +251,9 @@ func convertWagriFeatureToFieldBatchInput(feature entity.WagriFeature) fieldEnti
 
 	// PinInfo(農地台帳情報)を変換
 	if feature.HasPinInfo() {
-		input.PinInfoList = make([]fieldEntity.FieldBatchPinInfo, len(feature.Properties.PinInfo))
+		input.PinInfoList = make([]types.FieldBatchPinInfo, len(feature.Properties.PinInfo))
 		for j, pinInfo := range feature.Properties.PinInfo {
-			input.PinInfoList[j] = fieldEntity.FieldBatchPinInfo{
+			input.PinInfoList[j] = types.FieldBatchPinInfo{
 				FarmerNumber:            pinInfo.FarmerNumber,
 				Address:                 pinInfo.Address,
 				Area:                    pinInfo.Area,

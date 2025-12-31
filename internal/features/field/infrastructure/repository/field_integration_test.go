@@ -4,6 +4,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
+	"github.com/mktkhr/field-manager-api/internal/features/shared/types"
 )
 
 var testDB *pgxpool.Pool
@@ -152,7 +154,7 @@ func TestFieldRepository_UpsertBatch_EmptyFeatures_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	// 空の入力リストでUpsertBatch
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{})
 	if err != nil {
 		t.Errorf("UpsertBatch() with empty features error = %v", err)
 	}
@@ -168,10 +170,10 @@ func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       fieldID.String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -185,7 +187,7 @@ func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("UpsertBatch() error = %v", err)
 	}
@@ -210,10 +212,10 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       fieldID.String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -225,7 +227,7 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 				},
 			},
 		},
-		SoilType: &entity.FieldBatchSoilType{
+		SoilType: &types.FieldBatchSoilType{
 			LargeCode:  "A",
 			MiddleCode: "A1",
 			SmallCode:  "A1a",
@@ -233,7 +235,7 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("UpsertBatch() with soil type error = %v", err)
 	}
@@ -258,10 +260,10 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 
 	fieldID := uuid.New()
 	descriptiveStudyDataRaw := "2024-01-15"
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       fieldID.String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -273,7 +275,7 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 				},
 			},
 		},
-		PinInfoList: []entity.FieldBatchPinInfo{
+		PinInfoList: []types.FieldBatchPinInfo{
 			{
 				FarmerNumber:            "F001",
 				Address:                 "東京都渋谷区1-1-1",
@@ -287,7 +289,7 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("UpsertBatch() with PinInfo error = %v", err)
 	}
@@ -310,10 +312,10 @@ func TestFieldRepository_UpsertBatch_InvalidFieldID_Integration(t *testing.T) {
 	registryRepo := NewFieldLandRegistryRepository(testDB)
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       "invalid-uuid",
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -327,7 +329,7 @@ func TestFieldRepository_UpsertBatch_InvalidFieldID_Integration(t *testing.T) {
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with invalid field ID should return error")
 	}
@@ -343,10 +345,10 @@ func TestFieldRepository_UpsertBatch_InvalidGeometry_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       fieldID.String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -358,7 +360,7 @@ func TestFieldRepository_UpsertBatch_InvalidGeometry_Integration(t *testing.T) {
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with invalid geometry should return error")
 	}
@@ -376,11 +378,11 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 	fieldID1 := uuid.New()
 	fieldID2 := uuid.New()
 
-	inputs := []entity.FieldBatchInput{
+	inputs := []types.FieldBatchInput{
 		{
 			ID:       fieldID1.String(),
 			CityCode: "163210",
-			Geometry: entity.FieldBatchGeometry{
+			Geometry: types.FieldBatchGeometry{
 				Type: "Polygon",
 				Coordinates: [][][]float64{
 					{
@@ -396,7 +398,7 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 		{
 			ID:       fieldID2.String(),
 			CityCode: "131016",
-			Geometry: entity.FieldBatchGeometry{
+			Geometry: types.FieldBatchGeometry{
 				Type: "Polygon",
 				Coordinates: [][][]float64{
 					{
@@ -444,10 +446,10 @@ func TestFieldRepository_UpsertBatch_UpdateExisting_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       fieldID.String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -462,13 +464,13 @@ func TestFieldRepository_UpsertBatch_UpdateExisting_Integration(t *testing.T) {
 	}
 
 	// 最初のUpsert
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err != nil {
 		t.Fatalf("First UpsertBatch() error = %v", err)
 	}
 
 	// 2回目のUpsert(同じIDで更新)
-	err = repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err = repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("Second UpsertBatch() error = %v", err)
 	}
@@ -519,16 +521,16 @@ func TestFieldRepository_UpsertBatch_TransactionError_Integration(t *testing.T) 
 	registryRepo := NewFieldLandRegistryRepository(testDB)
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       uuid.New().String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type:        "Polygon",
 			Coordinates: [][][]float64{{{139.6917, 35.6895}, {139.6920, 35.6895}, {139.6920, 35.6898}, {139.6917, 35.6898}, {139.6917, 35.6895}}},
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with cancelled context should return error")
 	}
@@ -544,16 +546,16 @@ func TestFieldRepository_UpsertBatch_EmptyGeometry_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       fieldID.String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type:        "Polygon",
 			Coordinates: [][][]float64{}, // 空のコーディネート
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with empty geometry should return error")
 	}
@@ -570,10 +572,10 @@ func TestFieldRepository_UpsertBatch_TwoPointsGeometry_Integration(t *testing.T)
 
 	fieldID := uuid.New()
 	// 2点だけのポリゴン - geom.SetCoordsでエラーになるはず
-	input := entity.FieldBatchInput{
+	input := types.FieldBatchInput{
 		ID:       fieldID.String(),
 		CityCode: "163210",
-		Geometry: entity.FieldBatchGeometry{
+		Geometry: types.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -584,7 +586,7 @@ func TestFieldRepository_UpsertBatch_TwoPointsGeometry_Integration(t *testing.T)
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
+	err := repo.UpsertBatch(ctx, []types.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with two points polygon should return error")
 	}
