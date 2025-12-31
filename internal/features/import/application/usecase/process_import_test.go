@@ -145,6 +145,7 @@ func TestProcessImportUseCase_Execute(t *testing.T) {
 		input          ProcessImportInput
 		wantErr        bool
 	}{
+		// 正常系: 有効なJSONデータを正常に処理し、圃場データをUPSERTする
 		{
 			name: "success with valid JSON",
 			mockStorage: &mockStorageClient{
@@ -160,6 +161,7 @@ func TestProcessImportUseCase_Execute(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		// 異常系: S3からのデータ取得に失敗した場合はエラーを返す
 		{
 			name: "S3 error",
 			mockStorage: &mockStorageClient{
@@ -175,6 +177,7 @@ func TestProcessImportUseCase_Execute(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		// 異常系: 不正なJSON形式の場合はパースエラーを返す
 		{
 			name: "invalid JSON",
 			mockStorage: &mockStorageClient{
@@ -190,6 +193,7 @@ func TestProcessImportUseCase_Execute(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		// 異常系: targetFeaturesキーが存在しない場合はエラーを返す
 		{
 			name: "missing targetFeatures",
 			mockStorage: &mockStorageClient{

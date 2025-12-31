@@ -97,6 +97,7 @@ func TestRequestImportUseCase_Execute(t *testing.T) {
 		wantErr    bool
 		wantErrMsg string
 	}{
+		// 正常系: 有効な市区町村コードでインポートジョブが作成され、Step Functionsが正常に開始される
 		{
 			name:  "success",
 			input: RequestImportInput{CityCode: "163210"},
@@ -111,6 +112,7 @@ func TestRequestImportUseCase_Execute(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		// 異常系: 市区町村コードが空の場合はバリデーションエラーを返す
 		{
 			name:       "empty city code",
 			input:      RequestImportInput{CityCode: ""},
@@ -119,6 +121,7 @@ func TestRequestImportUseCase_Execute(t *testing.T) {
 			wantErr:    true,
 			wantErrMsg: "市区町村コードは必須です",
 		},
+		// 異常系: DBへのジョブ作成が失敗した場合はエラーを返す
 		{
 			name:  "create job error",
 			input: RequestImportInput{CityCode: "163210"},
@@ -128,6 +131,7 @@ func TestRequestImportUseCase_Execute(t *testing.T) {
 			mockSfn: &mockStepFunctionsClient{},
 			wantErr: true,
 		},
+		// 異常系: Step Functions実行開始が失敗した場合はエラーを返す
 		{
 			name:  "start execution error",
 			input: RequestImportInput{CityCode: "163210"},

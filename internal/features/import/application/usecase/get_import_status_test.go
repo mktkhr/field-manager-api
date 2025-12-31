@@ -51,6 +51,7 @@ func TestGetImportStatusUseCase_Execute(t *testing.T) {
 		wantErr   bool
 		errType   string
 	}{
+		// 正常系: 存在するジョブIDで正しくステータスを取得できる
 		{
 			name: "success",
 			mockQuery: &mockImportJobQuery{
@@ -68,6 +69,7 @@ func TestGetImportStatusUseCase_Execute(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		// 異常系: 存在しないジョブIDの場合はNOT_FOUNDエラーを返す
 		{
 			name: "not found",
 			mockQuery: &mockImportJobQuery{
@@ -77,6 +79,7 @@ func TestGetImportStatusUseCase_Execute(t *testing.T) {
 			wantErr: true,
 			errType: "NOT_FOUND",
 		},
+		// 異常系: DBエラーの場合はINTERNAL_ERRORを返す
 		{
 			name: "internal error",
 			mockQuery: &mockImportJobQuery{
