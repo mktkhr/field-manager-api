@@ -209,7 +209,8 @@ localstack-build-lambda: ## wagri-fetcher Lambdaをビルド
 	@echo "ビルド完了: cmd/wagri-fetcher/wagri-fetcher.zip"
 
 localstack-deploy-lambda: localstack-build-lambda ## wagri-fetcher LambdaをLocalStackにデプロイ
-	@echo "wagri-fetcher LambdaをLocalStackにデプロイしています..."
+	@echo "wagri-fetcher Lambdaをビルド＆デプロイしています..."
+	@docker compose -f docker/compose.yaml cp cmd/wagri-fetcher/wagri-fetcher.zip localstack:/tmp/wagri-fetcher.zip
 	@docker compose -f docker/compose.yaml exec localstack awslocal lambda create-function \
 		--function-name wagri-fetcher \
 		--runtime provided.al2023 \
@@ -220,6 +221,10 @@ localstack-deploy-lambda: localstack-build-lambda ## wagri-fetcher LambdaをLoca
 	docker compose -f docker/compose.yaml exec localstack awslocal lambda update-function-code \
 		--function-name wagri-fetcher \
 		--zip-file fileb:///tmp/wagri-fetcher.zip
+	@echo "環境変数を設定しています..."
+	@docker compose -f docker/compose.yaml exec localstack awslocal lambda update-function-configuration \
+		--function-name wagri-fetcher \
+		--environment "Variables={STORAGE_S3_ENABLED=false,STORAGE_ENDPOINT=http://rustfs:9000,STORAGE_BUCKET=$(STORAGE_BUCKET),STORAGE_ACCESS_KEY_ID=$(STORAGE_ACCESS_KEY_ID),STORAGE_SECRET_ACCESS_KEY=$(STORAGE_SECRET_ACCESS_KEY),STORAGE_REGION=$(STORAGE_REGION),WAGRI_BASE_URL=$(WAGRI_BASE_URL),WAGRI_CLIENT_ID=$(WAGRI_CLIENT_ID),WAGRI_CLIENT_SECRET=$(WAGRI_CLIENT_SECRET)}"
 	@echo "デプロイ完了"
 
 localstack-invoke-lambda: ## wagri-fetcher Lambdaをテスト実行
@@ -233,12 +238,12 @@ localstack-invoke-lambda: ## wagri-fetcher Lambdaをテスト実行
 localstack-start-workflow: ## Step Functionsワークフローをテスト実行
 	@echo "Step Functionsワークフローをテスト実行しています..."
 	@docker compose -f docker/compose.yaml exec localstack awslocal stepfunctions start-execution \
-		--state-machine-arn arn:aws:states:ap-northeast-1:000000000000:stateMachine:wagri-import-workflow \
+		--state-machine-arn arn:aws:states:us-east-1:000000000000:stateMachine:wagri-import-workflow \
 		--input '{"city_code":"163210","import_job_id":"00000000-0000-0000-0000-000000000001"}'
 
 localstack-list-executions: ## Step Functions実行履歴を表示
 	@docker compose -f docker/compose.yaml exec localstack awslocal stepfunctions list-executions \
-		--state-machine-arn arn:aws:states:ap-northeast-1:000000000000:stateMachine:wagri-import-workflow
+		--state-machine-arn arn:aws:states:us-east-1:000000000000:stateMachine:wagri-import-workflow
 
 # =============================================================================
 # Import Processor (EKS Job)
@@ -257,15 +262,17 @@ import-processor-run: ## import-processorをローカル実行 (S3_KEY=xxx IMPOR
 	@echo "import-processorをローカル実行しています..."
 	@docker run --rm \
 		--network field_manager_network \
-		-e AWS_REGION=ap-northeast-1 \
-		-e LOCALSTACK_ENABLED=true \
-		-e LOCALSTACK_URL=http://localstack:4566 \
-		-e AWS_S3_BUCKET=field-manager-imports \
+		-e STORAGE_S3_ENABLED=false \
+		-e STORAGE_ENDPOINT=http://rustfs:9000 \
+		-e STORAGE_BUCKET=$(STORAGE_BUCKET) \
+		-e STORAGE_ACCESS_KEY_ID=$(STORAGE_ACCESS_KEY_ID) \
+		-e STORAGE_SECRET_ACCESS_KEY=$(STORAGE_SECRET_ACCESS_KEY) \
+		-e STORAGE_REGION=$(STORAGE_REGION) \
 		-e DB_HOST=postgres \
 		-e DB_PORT=5432 \
-		-e DB_USER=$(POSTGRES_USER) \
-		-e DB_PASSWORD=$(POSTGRES_PASSWORD) \
-		-e DB_NAME=$(POSTGRES_DB) \
+		-e DB_USER=$(DB_USER) \
+		-e DB_PASSWORD=$(DB_PASSWORD) \
+		-e DB_NAME=$(DB_NAME) \
 		-e DB_SSL_MODE=disable \
 		import-processor:local \
 		--s3-key $(S3_KEY) \

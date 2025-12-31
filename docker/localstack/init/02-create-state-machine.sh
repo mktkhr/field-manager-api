@@ -26,7 +26,7 @@ cat > /tmp/state-machine.json << 'EOF'
   "States": {
     "FetchFromWagri": {
       "Type": "Task",
-      "Resource": "arn:aws:lambda:ap-northeast-1:000000000000:function:wagri-fetcher",
+      "Resource": "arn:aws:lambda:us-east-1:000000000000:function:wagri-fetcher",
       "Next": "ProcessAndUpsert",
       "Retry": [{
         "ErrorEquals": ["States.TaskFailed"],
