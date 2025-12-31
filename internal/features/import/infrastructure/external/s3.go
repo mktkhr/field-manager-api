@@ -6,6 +6,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	appConfig "github.com/mktkhr/field-manager-api/internal/config"
 	"github.com/mktkhr/field-manager-api/internal/features/import/application/port"
@@ -25,7 +26,8 @@ type s3Client struct {
 	bucket string
 }
 
-// NewS3Client は新しいS3Clientを作成する
+// NewS3Client は新しいS3Clientを作成する(AWSConfig使用)
+// Deprecated: NewS3ClientFromStorageConfigを使用してください
 func NewS3Client(ctx context.Context, cfg *appConfig.AWSConfig) (port.StorageClient, error) {
 	opts := []func(*config.LoadOptions) error{
 		config.WithRegion(cfg.Region),
@@ -60,6 +62,53 @@ func NewS3Client(ctx context.Context, cfg *appConfig.AWSConfig) (port.StorageCli
 	return &s3Client{
 		api:    client,
 		bucket: cfg.S3Bucket,
+	}, nil
+}
+
+// NewS3ClientFromStorageConfig はStorageConfigからS3Clientを作成する
+// S3Enabled=true: AWS S3に接続
+// S3Enabled=false: RustFS/MinIOに接続
+func NewS3ClientFromStorageConfig(ctx context.Context, cfg *appConfig.StorageConfig) (port.StorageClient, error) {
+	opts := []func(*config.LoadOptions) error{
+		config.WithRegion(cfg.Region),
+	}
+
+	// RustFS/MinIOの場合はカスタムエンドポイントと認証情報を設定
+	if !cfg.S3Enabled {
+		// 静的認証情報を設定
+		opts = append(opts, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
+		))
+
+		// カスタムエンドポイントを設定
+		//nolint:staticcheck
+		opts = append(opts, config.WithEndpointResolverWithOptions(
+			//nolint:staticcheck
+			aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				//nolint:staticcheck
+				return aws.Endpoint{
+					URL:               cfg.Endpoint,
+					HostnameImmutable: true,
+				}, nil
+			}),
+		))
+	}
+
+	awsCfg, err := config.LoadDefaultConfig(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
+		// RustFS/MinIOの場合はパス形式URLを使用
+		if !cfg.S3Enabled {
+			o.UsePathStyle = cfg.UsePathStyle
+		}
+	})
+
+	return &s3Client{
+		api:    client,
+		bucket: cfg.Bucket,
 	}, nil
 }
 
