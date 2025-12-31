@@ -4,14 +4,13 @@ package repository
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
-	importEntity "github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 )
 
 var testDB *pgxpool.Pool
@@ -33,14 +32,12 @@ func TestMain(m *testing.M) {
 	var err error
 	testDB, err = pgxpool.New(ctx, connString)
 	if err != nil {
-		fmt.Printf("テスト用DB接続に失敗: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("テスト用DB接続に失敗: %v", err)
 	}
 	defer testDB.Close()
 
 	if err := testDB.Ping(ctx); err != nil {
-		fmt.Printf("テスト用DBへのPingに失敗: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("テスト用DBへのPingに失敗: %v", err)
 	}
 
 	os.Exit(m.Run())
@@ -146,6 +143,7 @@ func TestFieldRepository_FindByID_NotFound_Integration(t *testing.T) {
 }
 
 func TestFieldRepository_UpsertBatch_EmptyFeatures_Integration(t *testing.T) {
+	// 空の入力リストでUpsertBatchが正常に動作することを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -153,14 +151,15 @@ func TestFieldRepository_UpsertBatch_EmptyFeatures_Integration(t *testing.T) {
 	registryRepo := NewFieldLandRegistryRepository(testDB)
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
-	// 空のfeatureリストでUpsertBatch
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{})
+	// 空の入力リストでUpsertBatch
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{})
 	if err != nil {
 		t.Errorf("UpsertBatch() with empty features error = %v", err)
 	}
 }
 
 func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
+	// 単一の入力でUpsertBatchが正常に動作することを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -169,9 +168,10 @@ func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       fieldID.String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -183,13 +183,9 @@ func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
 				},
 			},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       fieldID.String(),
-			CityCode: "163210",
-		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("UpsertBatch() error = %v", err)
 	}
@@ -205,6 +201,7 @@ func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
 }
 
 func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
+	// 土壌タイプ情報を含む入力でUpsertBatchが正常に動作することを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -213,9 +210,10 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       fieldID.String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -227,17 +225,15 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 				},
 			},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:             fieldID.String(),
-			CityCode:       "163210",
-			SoilLargeCode:  "A",
-			SoilMiddleCode: "A1",
-			SoilSmallCode:  "A1a",
-			SoilSmallName:  "テスト土壌",
+		SoilType: &entity.FieldBatchSoilType{
+			LargeCode:  "A",
+			MiddleCode: "A1",
+			SmallCode:  "A1a",
+			SmallName:  "テスト土壌",
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("UpsertBatch() with soil type error = %v", err)
 	}
@@ -252,6 +248,7 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 }
 
 func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
+	// 農地台帳情報を含む入力でUpsertBatchが正常に動作することを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -260,9 +257,11 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	descriptiveStudyDataRaw := "2024-01-15"
+	input := entity.FieldBatchInput{
+		ID:       fieldID.String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -274,25 +273,21 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 				},
 			},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       fieldID.String(),
-			CityCode: "163210",
-			PinInfo: []importEntity.WagriPinInfo{
-				{
-					FarmerNumber:               "F001",
-					Address:                    "東京都渋谷区1-1-1",
-					Area:                       1234,
-					LandCategoryCode:           "01",
-					LandCategory:               "田",
-					IsIdleAgriculturalLandCode: "1",
-					IsIdleAgriculturalLand:     "遊休農地ではない",
-					DescriptiveStudyData:       func() *string { v := "2024-01-15"; return &v }(),
-				},
+		PinInfoList: []entity.FieldBatchPinInfo{
+			{
+				FarmerNumber:            "F001",
+				Address:                 "東京都渋谷区1-1-1",
+				Area:                    1234,
+				LandCategoryCode:        "01",
+				LandCategory:            "田",
+				IdleLandStatusCode:      "1",
+				IdleLandStatus:          "遊休農地ではない",
+				DescriptiveStudyDataRaw: &descriptiveStudyDataRaw,
 			},
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("UpsertBatch() with PinInfo error = %v", err)
 	}
@@ -307,6 +302,7 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 }
 
 func TestFieldRepository_UpsertBatch_InvalidFieldID_Integration(t *testing.T) {
+	// 不正なフィールドIDでUpsertBatchがエラーを返すことを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -314,9 +310,10 @@ func TestFieldRepository_UpsertBatch_InvalidFieldID_Integration(t *testing.T) {
 	registryRepo := NewFieldLandRegistryRepository(testDB)
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       "invalid-uuid",
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -328,19 +325,16 @@ func TestFieldRepository_UpsertBatch_InvalidFieldID_Integration(t *testing.T) {
 				},
 			},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       "invalid-uuid",
-			CityCode: "163210",
-		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with invalid field ID should return error")
 	}
 }
 
 func TestFieldRepository_UpsertBatch_InvalidGeometry_Integration(t *testing.T) {
+	// 不正なジオメトリでUpsertBatchがエラーを返すことを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -349,9 +343,10 @@ func TestFieldRepository_UpsertBatch_InvalidGeometry_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       fieldID.String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -361,19 +356,16 @@ func TestFieldRepository_UpsertBatch_InvalidGeometry_Integration(t *testing.T) {
 				},
 			},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       fieldID.String(),
-			CityCode: "163210",
-		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with invalid geometry should return error")
 	}
 }
 
 func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) {
+	// 複数の入力でUpsertBatchが正常に動作することを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -384,10 +376,11 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 	fieldID1 := uuid.New()
 	fieldID2 := uuid.New()
 
-	features := []importEntity.WagriFeature{
+	inputs := []entity.FieldBatchInput{
 		{
-			Type: "Feature",
-			Geometry: importEntity.WagriGeometry{
+			ID:       fieldID1.String(),
+			CityCode: "163210",
+			Geometry: entity.FieldBatchGeometry{
 				Type: "Polygon",
 				Coordinates: [][][]float64{
 					{
@@ -399,14 +392,11 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 					},
 				},
 			},
-			Properties: importEntity.WagriProperties{
-				ID:       fieldID1.String(),
-				CityCode: "163210",
-			},
 		},
 		{
-			Type: "Feature",
-			Geometry: importEntity.WagriGeometry{
+			ID:       fieldID2.String(),
+			CityCode: "131016",
+			Geometry: entity.FieldBatchGeometry{
 				Type: "Polygon",
 				Coordinates: [][][]float64{
 					{
@@ -418,14 +408,10 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 					},
 				},
 			},
-			Properties: importEntity.WagriProperties{
-				ID:       fieldID2.String(),
-				CityCode: "131016",
-			},
 		},
 	}
 
-	err := repo.UpsertBatch(ctx, features)
+	err := repo.UpsertBatch(ctx, inputs)
 	if err != nil {
 		t.Errorf("UpsertBatch() with multiple features error = %v", err)
 	}
@@ -449,6 +435,7 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 }
 
 func TestFieldRepository_UpsertBatch_UpdateExisting_Integration(t *testing.T) {
+	// 既存のレコードをUpsertBatchで更新できることを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -457,9 +444,10 @@ func TestFieldRepository_UpsertBatch_UpdateExisting_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       fieldID.String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -471,20 +459,16 @@ func TestFieldRepository_UpsertBatch_UpdateExisting_Integration(t *testing.T) {
 				},
 			},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       fieldID.String(),
-			CityCode: "163210",
-		},
 	}
 
 	// 最初のUpsert
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err != nil {
 		t.Fatalf("First UpsertBatch() error = %v", err)
 	}
 
-	// 2回目のUpsert（同じIDで更新）
-	err = repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	// 2回目のUpsert(同じIDで更新)
+	err = repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err != nil {
 		t.Errorf("Second UpsertBatch() error = %v", err)
 	}
@@ -527,6 +511,7 @@ func TestFieldRepository_Delete_Error_Integration(t *testing.T) {
 }
 
 func TestFieldRepository_UpsertBatch_TransactionError_Integration(t *testing.T) {
+	// キャンセルされたコンテキストでUpsertBatchがエラーを返すことを確認する
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -534,25 +519,23 @@ func TestFieldRepository_UpsertBatch_TransactionError_Integration(t *testing.T) 
 	registryRepo := NewFieldLandRegistryRepository(testDB)
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       uuid.New().String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type:        "Polygon",
 			Coordinates: [][][]float64{{{139.6917, 35.6895}, {139.6920, 35.6895}, {139.6920, 35.6898}, {139.6917, 35.6898}, {139.6917, 35.6895}}},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       uuid.New().String(),
-			CityCode: "163210",
-		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with cancelled context should return error")
 	}
 }
 
 func TestFieldRepository_UpsertBatch_EmptyGeometry_Integration(t *testing.T) {
+	// 空のジオメトリでUpsertBatchがエラーを返すことを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -561,25 +544,23 @@ func TestFieldRepository_UpsertBatch_EmptyGeometry_Integration(t *testing.T) {
 	repo := NewFieldRepository(testDB, masterRepo, registryRepo)
 
 	fieldID := uuid.New()
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       fieldID.String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type:        "Polygon",
 			Coordinates: [][][]float64{}, // 空のコーディネート
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       fieldID.String(),
-			CityCode: "163210",
-		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with empty geometry should return error")
 	}
 }
 
 func TestFieldRepository_UpsertBatch_TwoPointsGeometry_Integration(t *testing.T) {
+	// 2点のみのポリゴンでUpsertBatchがエラーを返すことを確認する
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
@@ -589,9 +570,10 @@ func TestFieldRepository_UpsertBatch_TwoPointsGeometry_Integration(t *testing.T)
 
 	fieldID := uuid.New()
 	// 2点だけのポリゴン - geom.SetCoordsでエラーになるはず
-	feature := importEntity.WagriFeature{
-		Type: "Feature",
-		Geometry: importEntity.WagriGeometry{
+	input := entity.FieldBatchInput{
+		ID:       fieldID.String(),
+		CityCode: "163210",
+		Geometry: entity.FieldBatchGeometry{
 			Type: "Polygon",
 			Coordinates: [][][]float64{
 				{
@@ -600,13 +582,9 @@ func TestFieldRepository_UpsertBatch_TwoPointsGeometry_Integration(t *testing.T)
 				},
 			},
 		},
-		Properties: importEntity.WagriProperties{
-			ID:       fieldID.String(),
-			CityCode: "163210",
-		},
 	}
 
-	err := repo.UpsertBatch(ctx, []importEntity.WagriFeature{feature})
+	err := repo.UpsertBatch(ctx, []entity.FieldBatchInput{input})
 	if err == nil {
 		t.Error("UpsertBatch() with two points polygon should return error")
 	}
