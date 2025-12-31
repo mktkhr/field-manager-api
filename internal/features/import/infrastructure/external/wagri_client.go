@@ -101,11 +101,8 @@ func (c *wagriClient) fetchToken(ctx context.Context) (string, error) {
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return "", fmt.Errorf("トークン取得エラー: ステータスコード %d, レスポンス読み取り失敗: %w", resp.StatusCode, err)
-		}
-		return "", fmt.Errorf("トークン取得エラー: ステータスコード %d, レスポンス: %s", resp.StatusCode, string(body))
+		// セキュリティ上の理由から、レスポンスボディはログに出力しない
+		return "", fmt.Errorf("トークン取得エラー: ステータスコード %d", resp.StatusCode)
 	}
 
 	var tokenResp wagriTokenResponse
