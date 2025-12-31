@@ -129,7 +129,7 @@ jobs:
         env:
           POSTGRES_HOST: postgres
           POSTGRES_PORT: 5432
-          POSTGRES_DB: opt_app_test
+          POSTGRES_DB: field_manager_db_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -142,7 +142,7 @@ jobs:
     env:
       DB_HOST: localhost
       DB_PORT: 5432
-      DB_NAME: opt_app_test
+      DB_NAME: field_manager_db_test
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_SSL_MODE: disable
