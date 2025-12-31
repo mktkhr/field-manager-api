@@ -3,6 +3,8 @@ package entity
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewImportJob はNewImportJobがCityCode、初期ステータス、タイムスタンプを正しく設定したImportJobを生成することをテストする
@@ -32,7 +34,8 @@ func TestNewImportJob(t *testing.T) {
 func TestImportJobStart(t *testing.T) {
 	job := NewImportJob("163210")
 
-	job.Start()
+	err := job.Start()
+	require.NoError(t, err, "Startでエラーが発生")
 
 	if job.Status != ImportStatusProcessing {
 		t.Errorf("Status = %q, 期待値 %q", job.Status, ImportStatusProcessing)
@@ -45,9 +48,10 @@ func TestImportJobStart(t *testing.T) {
 // TestImportJobComplete はCompleteメソッドがステータスをCompletedに変更しCompletedAtを設定することをテストする
 func TestImportJobComplete(t *testing.T) {
 	job := NewImportJob("163210")
-	job.Start()
+	require.NoError(t, job.Start(), "Startでエラーが発生")
 
-	job.Complete()
+	err := job.Complete()
+	require.NoError(t, err, "Completeでエラーが発生")
 
 	if job.Status != ImportStatusCompleted {
 		t.Errorf("Status = %q, 期待値 %q", job.Status, ImportStatusCompleted)
@@ -60,10 +64,11 @@ func TestImportJobComplete(t *testing.T) {
 // TestImportJobFail はFailメソッドがステータスをFailedに変更しErrorMessageとCompletedAtを設定することをテストする
 func TestImportJobFail(t *testing.T) {
 	job := NewImportJob("163210")
-	job.Start()
+	require.NoError(t, job.Start(), "Startでエラーが発生")
 	errorMessage := "Something went wrong"
 
-	job.Fail(errorMessage)
+	err := job.Fail(errorMessage)
+	require.NoError(t, err, "Failでエラーが発生")
 
 	if job.Status != ImportStatusFailed {
 		t.Errorf("Status = %q, 期待値 %q", job.Status, ImportStatusFailed)
@@ -82,9 +87,10 @@ func TestImportJobFail(t *testing.T) {
 // TestImportJobPartialComplete はPartialCompleteメソッドがステータスをPartiallyCompletedに変更することをテストする
 func TestImportJobPartialComplete(t *testing.T) {
 	job := NewImportJob("163210")
-	job.Start()
+	require.NoError(t, job.Start(), "Startでエラーが発生")
 
-	job.PartialComplete()
+	err := job.PartialComplete()
+	require.NoError(t, err, "PartialCompleteでエラーが発生")
 
 	if job.Status != ImportStatusPartiallyCompleted {
 		t.Errorf("Status = %q, 期待値 %q", job.Status, ImportStatusPartiallyCompleted)
@@ -410,7 +416,7 @@ func TestImportJob_UpdateProgress(t *testing.T) {
 // TestImportJob_SetError はSetErrorメソッドがエラーメッセージと失敗レコードIDを設定しステータスをFailedに変更することをテストする
 func TestImportJob_SetError(t *testing.T) {
 	job := NewImportJob("163210")
-	job.Start()
+	require.NoError(t, job.Start(), "ジョブの開始に失敗")
 	errorMessage := "Something went wrong"
 	failedIDs := []string{"id1", "id2", "id3"}
 

@@ -136,24 +136,24 @@ func (j *ImportJob) IsRunning() bool {
 }
 
 // Start はジョブを開始する
-func (j *ImportJob) Start() {
-	_ = j.TransitionTo(ImportStatusProcessing)
+func (j *ImportJob) Start() error {
+	return j.TransitionTo(ImportStatusProcessing)
 }
 
 // Complete はジョブを完了する
-func (j *ImportJob) Complete() {
-	_ = j.TransitionTo(ImportStatusCompleted)
+func (j *ImportJob) Complete() error {
+	return j.TransitionTo(ImportStatusCompleted)
 }
 
 // Fail はジョブを失敗状態にする
-func (j *ImportJob) Fail(message string) {
+func (j *ImportJob) Fail(message string) error {
 	j.ErrorMessage = &message
-	_ = j.TransitionTo(ImportStatusFailed)
+	return j.TransitionTo(ImportStatusFailed)
 }
 
 // PartialComplete はジョブを部分完了状態にする
-func (j *ImportJob) PartialComplete() {
-	_ = j.TransitionTo(ImportStatusPartiallyCompleted)
+func (j *ImportJob) PartialComplete() error {
+	return j.TransitionTo(ImportStatusPartiallyCompleted)
 }
 
 // Duration はジョブの実行時間を返す
