@@ -1,7 +1,7 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
-RUN apk add --no-cache git
+RUN apk add --no-cache git gcc musl-dev
 
 WORKDIR /app
 
@@ -12,8 +12,8 @@ RUN go mod download
 # ソースコードをコピー
 COPY . .
 
-# ビルド
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /import-processor ./cmd/import-processor
+# ビルド(h3-goがCGOを必要とするため有効化)
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o /import-processor ./cmd/import-processor
 
 # Runtime stage
 FROM alpine:3.20

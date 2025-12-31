@@ -60,9 +60,9 @@ func run(ctx context.Context, importJobID uuid.UUID, s3Key string, batchSize int
 		return fmt.Errorf("データベース設定の読み込みに失敗: %w", err)
 	}
 
-	awsCfg, err := config.LoadAWSConfig()
+	storageCfg, err := config.LoadStorageConfig()
 	if err != nil {
-		return fmt.Errorf("AWS設定の読み込みに失敗: %w", err)
+		return fmt.Errorf("storage設定の読み込みに失敗: %w", err)
 	}
 
 	// データベース接続
@@ -73,9 +73,9 @@ func run(ctx context.Context, importJobID uuid.UUID, s3Key string, batchSize int
 	defer pool.Close()
 
 	// S3クライアント作成
-	s3Client, err := importExternal.NewS3Client(ctx, awsCfg)
+	s3Client, err := importExternal.NewS3ClientFromStorageConfig(ctx, storageCfg)
 	if err != nil {
-		return fmt.Errorf("S3クライアントの作成に失敗: %w", err)
+		return fmt.Errorf("s3クライアントの作成に失敗: %w", err)
 	}
 
 	// リポジトリ作成
