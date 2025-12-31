@@ -4,7 +4,7 @@ package repository
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"os"
 	"testing"
 
@@ -33,15 +33,13 @@ func TestMain(m *testing.M) {
 	var err error
 	testDB, err = pgxpool.New(ctx, connString)
 	if err != nil {
-		fmt.Printf("テスト用DB接続に失敗: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("テスト用DB接続に失敗: %v", err)
 	}
 	defer testDB.Close()
 
 	// 接続確認
 	if err := testDB.Ping(ctx); err != nil {
-		fmt.Printf("テスト用DBへのPingに失敗: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("テスト用DBへのPingに失敗: %v", err)
 	}
 
 	os.Exit(m.Run())
