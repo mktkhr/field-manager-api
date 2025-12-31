@@ -5,7 +5,7 @@ on:
     branches: [develop]
 
 env:
-  GO_VERSION: '1.25.5'
+  GO_VERSION: "1.25.5"
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/app
 
@@ -133,8 +133,8 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
       # Generate SchemaSpy
       - name: Generate SchemaSpy
@@ -156,7 +156,7 @@ jobs:
       # Setup Node.js for Redocly
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       # Generate API docs
       - name: Generate API docs
