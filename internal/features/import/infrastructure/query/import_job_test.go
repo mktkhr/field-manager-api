@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
+	"github.com/stretchr/testify/require"
 )
 
 func TestImportJobQuery_ToEntity(t *testing.T) {
@@ -20,7 +21,8 @@ func TestImportJobQuery_ToEntity(t *testing.T) {
 	executionArn := "arn:aws:states:ap-northeast-1:123456789012:execution:test:abc123"
 	errorMessage := "Something went wrong"
 	failedRecordIDs := []string{"id1", "id2", "id3"}
-	failedRecordIDsJSON, _ := json.Marshal(failedRecordIDs)
+	failedRecordIDsJSON, err := json.Marshal(failedRecordIDs)
+	require.NoError(t, err, "json.Marshalでエラーが発生")
 
 	tests := []struct {
 		name string
@@ -184,7 +186,8 @@ func TestImportJobQuery_ToEntity_FieldMapping(t *testing.T) {
 	executionArn := "arn:aws:states:ap-northeast-1:123456789012:execution:test:abc123"
 	errorMessage := "Something went wrong"
 	failedRecordIDs := []string{"id1", "id2", "id3"}
-	failedRecordIDsJSON, _ := json.Marshal(failedRecordIDs)
+	failedRecordIDsJSON, err := json.Marshal(failedRecordIDs)
+	require.NoError(t, err, "json.Marshalでエラーが発生")
 
 	id := uuid.New()
 	row := &sqlc.ImportJob{

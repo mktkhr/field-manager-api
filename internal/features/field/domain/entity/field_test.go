@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewField はNewFieldが正しいID、CityCode、デフォルト名称、タイムスタンプを持つFieldを生成することをテストする
@@ -93,7 +94,8 @@ func TestSetGeometry(t *testing.T) {
 			{139.1, 35.0},
 			{139.05, 35.1},
 		}
-		polygon, _ := ConvertLinearPolygonToPolygon(coords)
+		polygon, err := ConvertLinearPolygonToPolygon(coords)
+		require.NoError(t, err, "ConvertLinearPolygonToPolygonでエラーが発生")
 
 		field.SetGeometry(polygon)
 
@@ -147,7 +149,8 @@ func TestCalculateCentroid(t *testing.T) {
 			{140.0, 36.0},
 			{139.0, 36.0},
 		}
-		polygon, _ := ConvertLinearPolygonToPolygon(coords)
+		polygon, err := ConvertLinearPolygonToPolygon(coords)
+		require.NoError(t, err, "ConvertLinearPolygonToPolygonでエラーが発生")
 
 		result := CalculateCentroid(polygon)
 
