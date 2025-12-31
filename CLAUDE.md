@@ -43,6 +43,11 @@ Claudeがユーザーと対話する場合は必ず日本語で行ってくだ�
 - Presentation層: フィールドバリデーション (形式/文字数/必須)
 - Usecase層: ビジネスルール (重複/存在/権限)
 
+**テストコードの品質ルール**:
+- **エラーハンドリング**: `require.NoError(t, err)` パターンを使用し、`_` でのエラー無視は禁止
+- **TestMain内のログ出力**: `fmt.Printf` ではなく `log.Fatalf` を使用
+- **エラーメッセージ**: 日本語で記載し、何が失敗したかを明確にすること
+
 ## ディレクトリ構成
 
 ```
@@ -100,6 +105,11 @@ Presentation → Application → Domain ← Infrastructure
 
 - 内側の層は外側に依存しない
 - Domain層でインターフェース定義、Infrastructure層で実装
+
+### 依存関係の詳細ルール
+- **Infrastructure → Application の参照禁止**: Infrastructure層からApplication層のインターフェースを直接importしない
+- **型変換はApplication層で**: 異なる機能間のデータ変換はApplication層(Usecase)で行う
+- **機能間の依存方向**: Consumer機能がProvider機能のデータを必要とする場合、Consumer側で入力型を定義し、Application層で変換を行う
 
 ## 主要コマンド
 
