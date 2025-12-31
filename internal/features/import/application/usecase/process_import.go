@@ -12,6 +12,7 @@ import (
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/repository"
 	"github.com/mktkhr/field-manager-api/internal/features/shared/types"
+	"github.com/mktkhr/field-manager-api/internal/utils"
 )
 
 const (
@@ -111,9 +112,9 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 				for _, f := range batch {
 					failedIDs = append(failedIDs, f.Properties.ID)
 				}
-				failedCount += int32(len(batch))
+				failedCount += utils.SafeIntToInt32(len(batch))
 			} else {
-				processedCount += int32(len(batch))
+				processedCount += utils.SafeIntToInt32(len(batch))
 			}
 
 			// 進捗を更新
@@ -133,9 +134,9 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 			for _, f := range batch {
 				failedIDs = append(failedIDs, f.Properties.ID)
 			}
-			failedCount += int32(len(batch))
+			failedCount += utils.SafeIntToInt32(len(batch))
 		} else {
-			processedCount += int32(len(batch))
+			processedCount += utils.SafeIntToInt32(len(batch))
 		}
 	}
 

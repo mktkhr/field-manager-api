@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mktkhr/field-manager-api/internal/utils"
 )
 
 // FieldLandRegistry は農地台帳エンティティ
@@ -48,7 +49,7 @@ func (r *FieldLandRegistry) SetAddress(address string) {
 // SetAreaSqm は面積を設定する
 func (r *FieldLandRegistry) SetAreaSqm(area int) {
 	if area != 0 {
-		a := int32(area)
+		a := utils.SafeIntToInt32(area)
 		r.AreaSqm = &a
 	}
 }
