@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/repository"
-	importEntity "github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/wkb"
@@ -72,7 +71,7 @@ func (r *fieldRepository) Upsert(ctx context.Context, field *entity.Field) error
 }
 
 // UpsertBatch は圃場をバッチでUPSERTする(wagriインポート用)
-func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEntity.WagriFeature) error {
+func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []entity.FieldBatchInput) error {
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("トランザクション開始に失敗: %w", err)
@@ -83,15 +82,15 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 
 	queries := sqlc.New(tx)
 
-	for _, feature := range features {
+	for _, input := range inputs {
 		// 1. 土壌タイプをUPSERT
 		var soilTypeID *uuid.UUID
-		if feature.Properties.HasSoilType() {
+		if input.HasSoilType() {
 			soilType := entity.NewSoilType(
-				feature.Properties.SoilLargeCode,
-				feature.Properties.SoilMiddleCode,
-				feature.Properties.SoilSmallCode,
-				feature.Properties.SoilSmallName,
+				input.SoilType.LargeCode,
+				input.SoilType.MiddleCode,
+				input.SoilType.SmallCode,
+				input.SoilType.SmallName,
 			)
 			id, err := r.masterRepo.UpsertSoilType(ctx, soilType)
 			if err != nil {
@@ -101,15 +100,15 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 		}
 
 		// 2. PinInfoからマスタデータをUPSERT
-		for _, pinInfo := range feature.Properties.PinInfo {
+		for _, pinInfo := range input.PinInfoList {
 			if pinInfo.LandCategoryCode != "" {
 				landCategory := entity.NewLandCategory(pinInfo.LandCategoryCode, pinInfo.LandCategory)
 				if err := r.masterRepo.UpsertLandCategory(ctx, landCategory); err != nil {
 					return fmt.Errorf("土地種別UPSERT失敗: %w", err)
 				}
 			}
-			if pinInfo.IsIdleAgriculturalLandCode != "" {
-				idleStatus := entity.NewIdleLandStatus(pinInfo.IsIdleAgriculturalLandCode, pinInfo.IsIdleAgriculturalLand)
+			if pinInfo.IdleLandStatusCode != "" {
+				idleStatus := entity.NewIdleLandStatus(pinInfo.IdleLandStatusCode, pinInfo.IdleLandStatus)
 				if err := r.masterRepo.UpsertIdleLandStatus(ctx, idleStatus); err != nil {
 					return fmt.Errorf("遊休農地状況UPSERT失敗: %w", err)
 				}
@@ -117,22 +116,19 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 		}
 
 		// 3. Field作成
-		fieldID, err := uuid.Parse(feature.Properties.ID)
+		fieldID, err := uuid.Parse(input.ID)
 		if err != nil {
 			return fmt.Errorf("圃場ID変換失敗: %w", err)
 		}
 
 		// LinearPolygon -> Polygon変換
-		var geometryCoords [][]float64
-		if len(feature.Geometry.Coordinates) > 0 {
-			geometryCoords = feature.Geometry.Coordinates[0]
-		}
+		geometryCoords := input.GetFirstCoordinates()
 		polygon, err := entity.ConvertLinearPolygonToPolygon(geometryCoords)
 		if err != nil {
 			return fmt.Errorf("ジオメトリ変換失敗: %w", err)
 		}
 
-		field := entity.NewField(fieldID, feature.Properties.CityCode)
+		field := entity.NewField(fieldID, input.CityCode)
 		field.SetGeometry(polygon)
 		if soilTypeID != nil {
 			field.SetSoilType(*soilTypeID)
@@ -169,13 +165,13 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, features []importEnti
 			return fmt.Errorf("農地台帳削除失敗: %w", err)
 		}
 
-		for _, pinInfo := range feature.Properties.PinInfo {
+		for _, pinInfo := range input.PinInfoList {
 			registry := entity.NewFieldLandRegistry(fieldID)
 			registry.SetFarmerNumber(pinInfo.FarmerNumber)
 			registry.SetAddress(pinInfo.Address)
 			registry.SetAreaSqm(pinInfo.Area)
 			registry.SetLandCategoryCode(pinInfo.LandCategoryCode)
-			registry.SetIdleLandStatusCode(pinInfo.IsIdleAgriculturalLandCode)
+			registry.SetIdleLandStatusCode(pinInfo.IdleLandStatusCode)
 			registry.SetDescriptiveStudyData(pinInfo.ParseDescriptiveStudyData())
 
 			var descriptiveStudyData pgtype.Date

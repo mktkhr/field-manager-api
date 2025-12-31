@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mktkhr/field-manager-api/internal/apperror"
+	fieldEntity "github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/import/application/port"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/repository"
@@ -21,7 +22,7 @@ const (
 // FieldRepository はField操作用のリポジトリインターフェース(Consumer側で定義)
 type FieldRepository interface {
 	// UpsertBatch は圃場をバッチでUPSERTする
-	UpsertBatch(ctx context.Context, features []entity.WagriFeature) error
+	UpsertBatch(ctx context.Context, inputs []fieldEntity.FieldBatchInput) error
 }
 
 // ProcessImportInput はインポート処理の入力
@@ -214,7 +215,59 @@ func (uc *ProcessImportUseCase) seekToTargetFeatures(decoder *json.Decoder) erro
 
 // processBatch はバッチを処理する
 func (uc *ProcessImportUseCase) processBatch(ctx context.Context, batch []entity.WagriFeature) error {
-	return uc.fieldRepo.UpsertBatch(ctx, batch)
+	inputs := convertWagriFeaturesToFieldBatchInputs(batch)
+	return uc.fieldRepo.UpsertBatch(ctx, inputs)
+}
+
+// convertWagriFeaturesToFieldBatchInputs はWagriFeatureをFieldBatchInputに変換する
+func convertWagriFeaturesToFieldBatchInputs(features []entity.WagriFeature) []fieldEntity.FieldBatchInput {
+	inputs := make([]fieldEntity.FieldBatchInput, len(features))
+	for i, feature := range features {
+		inputs[i] = convertWagriFeatureToFieldBatchInput(feature)
+	}
+	return inputs
+}
+
+// convertWagriFeatureToFieldBatchInput は単一のWagriFeatureをFieldBatchInputに変換する
+func convertWagriFeatureToFieldBatchInput(feature entity.WagriFeature) fieldEntity.FieldBatchInput {
+	input := fieldEntity.FieldBatchInput{
+		ID:       feature.Properties.ID,
+		CityCode: feature.Properties.CityCode,
+		Geometry: fieldEntity.FieldBatchGeometry{
+			Coordinates: feature.Geometry.Coordinates,
+			Type:        feature.Geometry.Type,
+		},
+	}
+
+	// 土壌タイプ情報を変換
+	if feature.Properties.HasSoilType() {
+		input.SoilType = &fieldEntity.FieldBatchSoilType{
+			LargeCode:  feature.Properties.SoilLargeCode,
+			MiddleCode: feature.Properties.SoilMiddleCode,
+			SmallCode:  feature.Properties.SoilSmallCode,
+			SmallName:  feature.Properties.SoilSmallName,
+		}
+	}
+
+	// PinInfo(農地台帳情報)を変換
+	if feature.HasPinInfo() {
+		input.PinInfoList = make([]fieldEntity.FieldBatchPinInfo, len(feature.Properties.PinInfo))
+		for j, pinInfo := range feature.Properties.PinInfo {
+			input.PinInfoList[j] = fieldEntity.FieldBatchPinInfo{
+				FarmerNumber:            pinInfo.FarmerNumber,
+				Address:                 pinInfo.Address,
+				Area:                    pinInfo.Area,
+				LandCategoryCode:        pinInfo.LandCategoryCode,
+				LandCategory:            pinInfo.LandCategory,
+				IdleLandStatusCode:      pinInfo.IsIdleAgriculturalLandCode,
+				IdleLandStatus:          pinInfo.IsIdleAgriculturalLand,
+				DescriptiveStudyData:    pinInfo.ParseDescriptiveStudyData(),
+				DescriptiveStudyDataRaw: pinInfo.DescriptiveStudyData,
+			}
+		}
+	}
+
+	return input
 }
 
 // handleError はエラーを処理してジョブを失敗状態にする

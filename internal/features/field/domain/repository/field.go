@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
-	importEntity "github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 )
 
 // FieldRepository は圃場のリポジトリインターフェース
@@ -26,5 +25,5 @@ type FieldRepository interface {
 	Upsert(ctx context.Context, field *entity.Field) error
 
 	// UpsertBatch は圃場をバッチでUPSERTする(wagriインポート用)
-	UpsertBatch(ctx context.Context, features []importEntity.WagriFeature) error
+	UpsertBatch(ctx context.Context, inputs []entity.FieldBatchInput) error
 }

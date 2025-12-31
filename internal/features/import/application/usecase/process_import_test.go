@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	fieldEntity "github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 )
 
@@ -47,7 +48,7 @@ type mockFieldRepository struct {
 	err error
 }
 
-func (m *mockFieldRepository) UpsertBatch(ctx context.Context, features []entity.WagriFeature) error {
+func (m *mockFieldRepository) UpsertBatch(ctx context.Context, inputs []fieldEntity.FieldBatchInput) error {
 	return m.err
 }
 
