@@ -1,9 +1,9 @@
-package types
+package usecase
 
 import "time"
 
 // FieldBatchInput はバッチUPSERT用の入力データ
-// 機能間でのデータ受け渡しに使用する共有型
+// Consumer側(import機能)で型を定義し、Provider側(field機能)が実装する
 type FieldBatchInput struct {
 	ID          string
 	CityCode    string
