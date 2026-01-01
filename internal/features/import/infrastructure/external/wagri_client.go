@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -97,7 +98,9 @@ func (c *wagriClient) fetchToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("トークン取得リクエストに失敗: %w", err)
 	}
 	defer func() {
-		_ = resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("HTTPレスポンスボディのクローズに失敗", "error", err)
+		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {
@@ -154,7 +157,9 @@ func (c *wagriClient) FetchFieldsByCityCodeToStream(ctx context.Context, cityCod
 		return nil, fmt.Errorf("API呼び出しに失敗: %w", err)
 	}
 	defer func() {
-		_ = resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("HTTPレスポンスボディのクローズに失敗", "error", err)
+		}
 	}()
 
 	if resp.StatusCode != http.StatusOK {

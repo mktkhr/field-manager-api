@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/mktkhr/field-manager-api/internal/apperror"
@@ -60,8 +61,10 @@ func (uc *RequestImportUseCase) Execute(ctx context.Context, input RequestImport
 
 	execution, err := uc.sfnClient.StartExecution(ctx, workflowInput)
 	if err != nil {
-		// ワークフロー開始失敗時はジョブを失敗状態に更新(エラーは無視)
-		_ = uc.importJobRepo.UpdateStatus(ctx, job.ID, entity.ImportStatusFailed)
+		// ワークフロー開始失敗時はジョブを失敗状態に更新
+		if updateErr := uc.importJobRepo.UpdateStatus(ctx, job.ID, entity.ImportStatusFailed); updateErr != nil {
+			slog.Warn("ジョブステータスの更新に失敗", "job_id", job.ID, "error", updateErr)
+		}
 		return nil, apperror.InternalErrorWithCause("ワークフローの開始に失敗しました", err)
 	}
 

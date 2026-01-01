@@ -71,7 +71,9 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 		return apperror.InternalErrorWithCause("S3からの読み取りに失敗しました", err)
 	}
 	defer func() {
-		_ = reader.Close()
+		if err := reader.Close(); err != nil {
+			uc.logger.Warn("S3リーダーのクローズに失敗", "error", err)
+		}
 	}()
 
 	// 2. JSONをストリーミングパース
