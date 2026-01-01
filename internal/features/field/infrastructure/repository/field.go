@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
-	importusecase "github.com/mktkhr/field-manager-api/internal/features/import/application/usecase"
+	importdto "github.com/mktkhr/field-manager-api/internal/features/import/domain/dto"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
 	"github.com/twpayne/go-geom"
 	"github.com/twpayne/go-geom/encoding/wkb"
@@ -65,7 +65,7 @@ func (r *fieldRepository) Upsert(ctx context.Context, field *entity.Field) error
 }
 
 // UpsertBatch は圃場をバッチでUPSERTする(wagriインポート用)
-func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []importusecase.FieldBatchInput) error {
+func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []importdto.FieldBatchInput) error {
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("トランザクション開始に失敗: %w", err)

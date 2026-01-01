@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/mktkhr/field-manager-api/internal/features/import/domain/dto"
 	"github.com/mktkhr/field-manager-api/internal/features/import/domain/entity"
 )
 
@@ -47,7 +48,7 @@ type mockFieldRepository struct {
 	err error
 }
 
-func (m *mockFieldRepository) UpsertBatch(ctx context.Context, inputs []FieldBatchInput) error {
+func (m *mockFieldRepository) UpsertBatch(ctx context.Context, inputs []dto.FieldBatchInput) error {
 	return m.err
 }
 

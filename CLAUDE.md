@@ -84,7 +84,8 @@ project-root/
 internal/features/<feature>/
 ├── domain/
 │   ├── entity/         # エンティティ、Value Object
-│   └── repository/     # リポジトリインターフェース
+│   ├── repository/     # リポジトリインターフェース
+│   └── dto/            # 機能間データ受け渡し用DTO(必要な場合のみ)
 ├── application/
 │   ├── usecase/        # ユースケース実装
 │   ├── port/           # 外部サービスインターフェース
@@ -116,14 +117,16 @@ Presentation → Application → Domain ← Infrastructure
 ### 機能間の型共有パターン
 機能間でデータを受け渡す場合は以下のパターンに従う:
 
-1. **Consumer側で型とインターフェースを定義**: データを必要とする側(Consumer)がapplication/usecase/で入力型とインターフェースを定義
-2. **Provider側がConsumerの型をimport**: データを提供する側(Provider)のinfrastructure層がConsumerの型をimportして実装
-3. **DI層で結合**: `server/router.go`でProvider実装をConsumerに注入
+1. **Consumer側でDomain層(dto/)に型を定義**: データを必要とする側(Consumer)がdomain/dto/で入力型を定義
+2. **Consumer側でApplication層にインターフェースを定義**: application/usecase/でProvider向けのインターフェースを定義
+3. **Provider側がConsumerのdto型をimport**: Provider側のinfrastructure層がConsumerのdomain/dto/をimport(Domain層同士なので許容)
+4. **DI層で結合**: `server/router.go`でProvider実装をConsumerに注入
 
 ```
 例: import機能がfield機能のリポジトリを利用する場合
-- import/application/usecase/: FieldBatchInput型とFieldRepositoryインターフェースを定義
-- field/infrastructure/repository/: importusecase.FieldBatchInputを受け取るUpsertBatchを実装
+- import/domain/dto/: FieldBatchInput型を定義
+- import/application/usecase/: FieldRepositoryインターフェースを定義(dto型を使用)
+- field/infrastructure/repository/: importdto.FieldBatchInputを受け取るUpsertBatchを実装
 - server/router.go: fieldRepository を ProcessImportUseCase に注入
 ```
 
