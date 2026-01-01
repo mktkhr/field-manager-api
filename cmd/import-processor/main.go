@@ -139,7 +139,9 @@ func getEnvOrDefault(key, defaultValue string) string {
 func getEnvIntOrDefault(key string, defaultValue int) int {
 	if v := os.Getenv(key); v != "" {
 		var i int
-		if _, err := fmt.Sscanf(v, "%d", &i); err == nil {
+		if _, err := fmt.Sscanf(v, "%d", &i); err != nil {
+			slog.Warn("環境変数のパースに失敗。デフォルト値を使用します", "key", key, "value", v, "default", defaultValue, "error", err)
+		} else {
 			return i
 		}
 	}
