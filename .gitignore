@@ -55,3 +55,4 @@ debug
 cmd/wagri-fetcher/bootstrap
 cmd/wagri-fetcher/wagri-fetcher.zip
 import-processor
+cluster-worker
