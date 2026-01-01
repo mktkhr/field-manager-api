@@ -110,6 +110,22 @@ Presentation → Application → Domain ← Infrastructure
 - **Infrastructure → Application の参照禁止**: Infrastructure層からApplication層のインターフェースを直接importしない
 - **型変換はApplication層で**: 異なる機能間のデータ変換はApplication層(Usecase)で行う
 - **機能間の依存方向**: Consumer機能がProvider機能のデータを必要とする場合、Consumer側で入力型を定義し、Application層で変換を行う
+- **sharedパッケージ禁止**: `features/shared/`のような機能間共有パッケージは作成しない
+- **features外からfeaturesへの参照禁止**: `internal/infrastructure/`等からfeaturesパッケージをimportしない(DIを行う`server/`は例外)
+
+### 機能間の型共有パターン
+機能間でデータを受け渡す場合は以下のパターンに従う:
+
+1. **Consumer側で型とインターフェースを定義**: データを必要とする側(Consumer)がapplication/usecase/で入力型とインターフェースを定義
+2. **Provider側がConsumerの型をimport**: データを提供する側(Provider)のinfrastructure層がConsumerの型をimportして実装
+3. **DI層で結合**: `server/router.go`でProvider実装をConsumerに注入
+
+```
+例: import機能がfield機能のリポジトリを利用する場合
+- import/application/usecase/: FieldBatchInput型とFieldRepositoryインターフェースを定義
+- field/infrastructure/repository/: importusecase.FieldBatchInputを受け取るUpsertBatchを実装
+- server/router.go: fieldRepository を ProcessImportUseCase に注入
+```
 
 ## 主要コマンド
 
