@@ -39,7 +39,10 @@ func TestFieldCalculateH3Indexes(t *testing.T) {
 	lat := 35.6812
 	lng := 139.7671
 
-	field.CalculateH3Indexes(lat, lng)
+	err := field.CalculateH3Indexes(lat, lng)
+	if err != nil {
+		t.Fatalf("CalculateH3Indexesでエラーが発生: %v", err)
+	}
 
 	if field.H3IndexRes3 == nil {
 		t.Error("H3IndexRes3がnilです")
@@ -97,7 +100,8 @@ func TestSetGeometry(t *testing.T) {
 		polygon, err := ConvertLinearPolygonToPolygon(coords)
 		require.NoError(t, err, "ConvertLinearPolygonToPolygonでエラーが発生")
 
-		field.SetGeometry(polygon)
+		err = field.SetGeometry(polygon)
+		require.NoError(t, err, "SetGeometryでエラーが発生")
 
 		if field.Geometry == nil {
 			t.Error("Geometryがnilです")
@@ -122,7 +126,8 @@ func TestSetGeometry(t *testing.T) {
 	t.Run("set nil polygon", func(t *testing.T) {
 		field := NewField(uuid.New(), "163210")
 
-		field.SetGeometry(nil)
+		err := field.SetGeometry(nil)
+		require.NoError(t, err, "SetGeometry(nil)でエラーが発生")
 
 		if field.Geometry != nil {
 			t.Error("Geometryがnilではありません")

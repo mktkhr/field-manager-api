@@ -128,7 +128,9 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []importusecas
 		}
 
 		field := entity.NewField(fieldID, input.CityCode)
-		field.SetGeometry(polygon)
+		if err := field.SetGeometry(polygon); err != nil {
+			return fmt.Errorf("ジオメトリ設定失敗: %w", err)
+		}
 		if soilTypeID != nil {
 			field.SetSoilType(*soilTypeID)
 		}

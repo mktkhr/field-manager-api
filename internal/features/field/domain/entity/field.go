@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,7 +41,7 @@ func NewField(id uuid.UUID, cityCode string) *Field {
 }
 
 // SetGeometry はジオメトリを設定し、関連する値も計算する
-func (f *Field) SetGeometry(polygon *geom.Polygon) {
+func (f *Field) SetGeometry(polygon *geom.Polygon) error {
 	f.Geometry = polygon
 
 	// Centroidを計算
@@ -52,31 +53,47 @@ func (f *Field) SetGeometry(polygon *geom.Polygon) {
 		if centroid != nil {
 			lat := centroid.Y()
 			lng := centroid.X()
-			f.CalculateH3Indexes(lat, lng)
+			if err := f.CalculateH3Indexes(lat, lng); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 // CalculateH3Indexes はH3インデックスを計算する
-func (f *Field) CalculateH3Indexes(lat, lng float64) {
+func (f *Field) CalculateH3Indexes(lat, lng float64) error {
 	latLng := h3.NewLatLng(lat, lng)
 
-	if cell3, err := h3.LatLngToCell(latLng, 3); err == nil {
-		s := cell3.String()
-		f.H3IndexRes3 = &s
+	cell3, err := h3.LatLngToCell(latLng, 3)
+	if err != nil {
+		return fmt.Errorf("H3インデックス(res3)の計算に失敗: %w", err)
 	}
-	if cell5, err := h3.LatLngToCell(latLng, 5); err == nil {
-		s := cell5.String()
-		f.H3IndexRes5 = &s
+	s3 := cell3.String()
+	f.H3IndexRes3 = &s3
+
+	cell5, err := h3.LatLngToCell(latLng, 5)
+	if err != nil {
+		return fmt.Errorf("H3インデックス(res5)の計算に失敗: %w", err)
 	}
-	if cell7, err := h3.LatLngToCell(latLng, 7); err == nil {
-		s := cell7.String()
-		f.H3IndexRes7 = &s
+	s5 := cell5.String()
+	f.H3IndexRes5 = &s5
+
+	cell7, err := h3.LatLngToCell(latLng, 7)
+	if err != nil {
+		return fmt.Errorf("H3インデックス(res7)の計算に失敗: %w", err)
 	}
-	if cell9, err := h3.LatLngToCell(latLng, 9); err == nil {
-		s := cell9.String()
-		f.H3IndexRes9 = &s
+	s7 := cell7.String()
+	f.H3IndexRes7 = &s7
+
+	cell9, err := h3.LatLngToCell(latLng, 9)
+	if err != nil {
+		return fmt.Errorf("H3インデックス(res9)の計算に失敗: %w", err)
 	}
+	s9 := cell9.String()
+	f.H3IndexRes9 = &s9
+
+	return nil
 }
 
 // SetSoilType は土壌タイプIDを設定する
