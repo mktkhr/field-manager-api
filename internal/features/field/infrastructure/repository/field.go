@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
-	"github.com/mktkhr/field-manager-api/internal/features/field/domain/repository"
 	"github.com/mktkhr/field-manager-api/internal/features/shared/types"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
 	"github.com/twpayne/go-geom"
@@ -24,7 +24,8 @@ type fieldRepository struct {
 }
 
 // NewFieldRepository は新しいFieldRepositoryを作成する
-func NewFieldRepository(db *pgxpool.Pool) repository.FieldRepository {
+// 戻り値は具象型を返し、呼び出し元で必要なインターフェースにキャストして使用する
+func NewFieldRepository(db *pgxpool.Pool) *fieldRepository {
 	return &fieldRepository{
 		db:      db,
 		queries: sqlc.New(db),
@@ -70,7 +71,9 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []types.FieldB
 		return fmt.Errorf("トランザクション開始に失敗: %w", err)
 	}
 	defer func() {
-		_ = tx.Rollback(ctx)
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			slog.Warn("トランザクションのロールバックに失敗", "error", err)
+		}
 	}()
 
 	queries := sqlc.New(tx)
