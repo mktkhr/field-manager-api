@@ -72,7 +72,7 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []importusecas
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			slog.Warn("トランザクションのロールバックに失敗", "error", err)
+			slog.Error("トランザクションのロールバックに失敗。データ不整合の可能性があります", "error", err)
 		}
 	}()
 
