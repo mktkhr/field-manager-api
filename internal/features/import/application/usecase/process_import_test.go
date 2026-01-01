@@ -217,6 +217,7 @@ func TestProcessImportUseCase_Execute(t *testing.T) {
 				tt.mockImportRepo,
 				tt.mockStorage,
 				tt.mockFieldRepo,
+				nil, // clusterJobEnqueuer
 				logger,
 			)
 
@@ -253,6 +254,7 @@ func TestProcessImportUseCase_DefaultBatchSize(t *testing.T) {
 		mockImportRepo,
 		mockStorage,
 		mockFieldRepo,
+		nil, // clusterJobEnqueuer
 		logger,
 	)
 

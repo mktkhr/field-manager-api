@@ -26,6 +26,12 @@ type FieldRepository interface {
 	UpsertBatch(ctx context.Context, inputs []dto.FieldBatchInput) error
 }
 
+// ClusterJobEnqueuer はクラスタージョブをエンキューするインターフェース(Consumer側で定義)
+type ClusterJobEnqueuer interface {
+	// Enqueue はクラスター計算ジョブをエンキューする
+	Enqueue(ctx context.Context, priority int32) error
+}
+
 // ProcessImportInput はインポート処理の入力
 type ProcessImportInput struct {
 	ImportJobID uuid.UUID
@@ -35,10 +41,11 @@ type ProcessImportInput struct {
 
 // ProcessImportUseCase はインポート処理のユースケース
 type ProcessImportUseCase struct {
-	importJobRepo repository.ImportJobRepository
-	storageClient port.StorageClient
-	fieldRepo     FieldRepository
-	logger        *slog.Logger
+	importJobRepo      repository.ImportJobRepository
+	storageClient      port.StorageClient
+	fieldRepo          FieldRepository
+	clusterJobEnqueuer ClusterJobEnqueuer
+	logger             *slog.Logger
 }
 
 // NewProcessImportUseCase は新しいProcessImportUseCaseを作成する
@@ -46,13 +53,15 @@ func NewProcessImportUseCase(
 	importJobRepo repository.ImportJobRepository,
 	storageClient port.StorageClient,
 	fieldRepo FieldRepository,
+	clusterJobEnqueuer ClusterJobEnqueuer,
 	logger *slog.Logger,
 ) *ProcessImportUseCase {
 	return &ProcessImportUseCase{
-		importJobRepo: importJobRepo,
-		storageClient: storageClient,
-		fieldRepo:     fieldRepo,
-		logger:        logger,
+		importJobRepo:      importJobRepo,
+		storageClient:      storageClient,
+		fieldRepo:          fieldRepo,
+		clusterJobEnqueuer: clusterJobEnqueuer,
+		logger:             logger,
 	}
 }
 
@@ -178,6 +187,15 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 		"failed", failedCount,
 		"status", finalStatus,
 	)
+
+	// インポート完了後にクラスター計算ジョブをエンキュー
+	if uc.clusterJobEnqueuer != nil && processedCount > 0 {
+		if err := uc.clusterJobEnqueuer.Enqueue(ctx, 1); err != nil {
+			uc.logger.Warn("クラスタージョブのエンキューに失敗しました",
+				"error", err.Error())
+			// エラーでもインポート自体は成功とする
+		}
+	}
 
 	return nil
 }
