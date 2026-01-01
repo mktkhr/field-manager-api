@@ -116,17 +116,19 @@ func loadDatabaseConfig() (*config.DatabaseConfig, error) {
 
 // createDBPool はデータベース接続プールを作成する
 func createDBPool(ctx context.Context, cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
-	// パスワードに特殊文字が含まれる場合に備えてURLエンコードを使用
-	connString := fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
-		url.QueryEscape(cfg.User),
-		url.QueryEscape(cfg.Password),
-		cfg.Host,
-		cfg.Port,
-		cfg.Name,
-		cfg.SSLMode,
-	)
-	return pgxpool.New(ctx, connString)
+	// パスワードに特殊文字が含まれる場合に備えてurl.UserPasswordを使用
+	// url.UserPasswordはuserinfoセクションに適したエスケープを行う
+	u := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(cfg.User, cfg.Password),
+		Host:   fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
+		Path:   cfg.Name,
+	}
+	q := u.Query()
+	q.Set("sslmode", cfg.SSLMode)
+	u.RawQuery = q.Encode()
+
+	return pgxpool.New(ctx, u.String())
 }
 
 func getEnvOrDefault(key, defaultValue string) string {
