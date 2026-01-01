@@ -73,6 +73,8 @@ jobs:
             優先度別(🔴高/🟡中/🟢低)に分類し、具体的な修正提案を含めてください。
             問題がない場合は「指摘なし」と明記してください。
 
+            レビュー結果を投稿する際は、まず `gh pr comment ${{ github.event.pull_request.number }} --edit-last --body "..."` で既存コメントの更新を試み、失敗した場合のみ `gh pr comment ${{ github.event.pull_request.number }} --body "..."` で新規投稿してください。
+
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           claude_args: '--allowed-tools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'

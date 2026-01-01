@@ -9,7 +9,7 @@ services:
     volumes:
       - type: volume
         source: field_manager_db_data
-        target: /var/lib/postgresql
+        target: /var/lib/postgresql/data
     healthcheck:
       test:
         [
@@ -26,6 +26,34 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - ${POSTGRES_HOST_PORT}:5432
+    networks:
+      - field_manager_network
+
+  postgres-test:
+    image: postgis/postgis:17-3.5
+    platform: linux/amd64
+    container_name: field_manager_db_test
+    restart: always
+    volumes:
+      - type: volume
+        source: field_manager_db_test_data
+        target: /var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_TEST_USER} -d ${POSTGRES_TEST_DB} -h localhost",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    environment:
+      POSTGRES_USER: ${POSTGRES_TEST_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_TEST_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_TEST_DB}
+    ports:
+      - ${POSTGRES_TEST_HOST_PORT}:5432
     networks:
       - field_manager_network
 
@@ -85,13 +113,41 @@ services:
     networks:
       - field_manager_network
 
+  localstack:
+    image: localstack/localstack:3.8
+    container_name: field_manager_localstack
+    restart: always
+    ports:
+      - "${LOCALSTACK_HOST_PORT}:4566"
+    environment:
+      SERVICES: stepfunctions,lambda,s3,logs
+      DEBUG: ${LOCALSTACK_DEBUG:-0}
+      PERSISTENCE: 1
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+      - type: volume
+        source: field_manager_localstack_data
+        target: /var/lib/localstack
+      - type: bind
+        source: ./localstack/init
+        target: /etc/localstack/init/ready.d
+    networks:
+      - field_manager_network
+
 volumes:
   field_manager_db_data:
     name: field_manager_db_data
+  field_manager_db_test_data:
+    name: field_manager_db_test_data
   field_manager_cache_data:
     name: field_manager_cache_data
   field_manager_rustfs_data:
     name: field_manager_rustfs_data
+  field_manager_localstack_data:
+    name: field_manager_localstack_data
 
 networks:
   field_manager_network:

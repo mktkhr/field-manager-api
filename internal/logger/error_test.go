@@ -67,12 +67,12 @@ func TestGetCallerMethod(t *testing.T) {
 	result := getCallerMethod(1)
 
 	if result == "" || result == "unknown" {
-		t.Errorf("getCallerMethod() should return valid method info, got %q", result)
+		t.Errorf("getCallerMethod()は有効なメソッド情報を返すべき、取得値 %q", result)
 	}
 
 	// ファイル名と行番号を含むことを確認
 	if len(result) < 10 {
-		t.Errorf("getCallerMethod() result too short: %q", result)
+		t.Errorf("getCallerMethod()の結果が短すぎます: %q", result)
 	}
 }
 
@@ -81,7 +81,7 @@ func TestGetCallerMethodUnknown(t *testing.T) {
 	result := getCallerMethod(1000)
 
 	if result != "unknown" {
-		t.Errorf("getCallerMethod(1000) should return 'unknown', got %q", result)
+		t.Errorf("getCallerMethod(1000)は'unknown'を返すべき、取得値 %q", result)
 	}
 }
 
@@ -128,15 +128,15 @@ func TestExtractDatabaseErrorInfo(t *testing.T) {
 			result := extractDatabaseErrorInfo(tt.err)
 			if tt.err == nil {
 				if result != nil {
-					t.Errorf("extractDatabaseErrorInfo() should return nil for nil error")
+					t.Errorf("extractDatabaseErrorInfo()はnilエラーに対してnilを返すべき")
 				}
 				return
 			}
 			if result == nil {
-				t.Fatal("extractDatabaseErrorInfo() should not return nil for non-nil error")
+				t.Fatal("extractDatabaseErrorInfo()は非nilエラーに対してnilを返すべきではない")
 			}
 			if result.Code != tt.wantCode {
-				t.Errorf("extractDatabaseErrorInfo().Code = %q, want %q", result.Code, tt.wantCode)
+				t.Errorf("extractDatabaseErrorInfo().Code = %q, 期待値 %q", result.Code, tt.wantCode)
 			}
 		})
 	}
@@ -168,7 +168,7 @@ func TestExtractSQLState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := extractSQLState(tt.errorStr); got != tt.want {
-				t.Errorf("extractSQLState() = %q, want %q", got, tt.want)
+				t.Errorf("extractSQLState() = %q, 期待値 %q", got, tt.want)
 			}
 		})
 	}

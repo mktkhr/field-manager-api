@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GO_VERSION: '1.25.5'
-  COVERAGE_THRESHOLD: '70'
+  GO_VERSION: "1.25.5"
+  COVERAGE_THRESHOLD: "70"
 
 jobs:
   # ===== VALIDATE =====
@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "24"
 
       - name: Install Redocly CLI
         run: npm install -g @redocly/cli
@@ -55,7 +55,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install tools
         run: |
@@ -129,7 +129,7 @@ jobs:
         env:
           POSTGRES_HOST: postgres
           POSTGRES_PORT: 5432
-          POSTGRES_DB: opt_app_test
+          POSTGRES_DB: field_manager_db_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -142,7 +142,7 @@ jobs:
     env:
       DB_HOST: localhost
       DB_PORT: 5432
-      DB_NAME: opt_app_test
+      DB_NAME: field_manager_db_test
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_SSL_MODE: disable

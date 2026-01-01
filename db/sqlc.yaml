@@ -39,7 +39,11 @@ sql:
             nullable: true
           # JSONB型マッピング
           - db_type: "jsonb"
-            go_type: "json.RawMessage"
+            go_type:
+              import: "encoding/json"
+              type: "RawMessage"
           - db_type: "jsonb"
             nullable: true
-            go_type: "json.RawMessage"
+            go_type:
+              import: "encoding/json"
+              type: "RawMessage"

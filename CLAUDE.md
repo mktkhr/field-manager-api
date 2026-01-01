@@ -16,6 +16,37 @@ Claudeがユーザーと対話する場合は必ず日本語で行ってくだ�
 - Test以外でのerrorの `_` を使ったハンドリングの回避
 - 機能(Feature)パッケージ間の直接的な `import` での参照
   - ある機能(Consumer)が別の機能(Provider)のロジックを必要とする場合、**Consumer側で必要なインターフェースを定義** し、Providerの実装に依存しないようにして対応してください
+- **英語でのコメント・ログ出力の使用**
+  - すべてのコード内コメント、ログメッセージ、エラーメッセージは日本語で記載すること
+  - テストコード内のコメント、エラーメッセージも日本語で記載すること
+
+### テスト実装ガイドライン
+
+**必須方針**: 実装と同時にテスト作成(TDD推奨)
+
+**フレームワーク**: testify/suite + testify/mock + httptest / 統合テスト=`*_integration_test.go`
+
+**ファイル構成**: `*_test.go`(単体) / `*_integration_test.go`(統合) / `mock_*_test.go`(モック)
+
+**カバレッジ要件**: Presentation層=90% / Usecase層=95% / 重要BL=100% / Domain層=100%
+
+**必須テストケース**:
+- 正常系: 有効データで成功
+- 異常系: 必須欠如/文字数違反/範囲外/フォーマット違反/不正JSON
+- 境界値: 最小値/最大値/最小値-1/最大値+1
+
+**命名規則**:
+- `Test{メソッド}_{種類}_{詳細}` (Success / ValidationError_{原因} / BoundaryValue_{詳細} / BusinessLogicError_{原因})
+  - **すべてのテストに日本語で `何をテストしているのか` のコメントを記載すること**
+
+**バリデーション責務**:
+- Presentation層: フィールドバリデーション (形式/文字数/必須)
+- Usecase層: ビジネスルール (重複/存在/権限)
+
+**テストコードの品質ルール**:
+- **エラーハンドリング**: `require.NoError(t, err)` パターンを使用し、`_` でのエラー無視は禁止
+- **TestMain内のログ出力**: `fmt.Printf` ではなく `log.Fatalf` を使用
+- **エラーメッセージ**: 日本語で記載し、何が失敗したかを明確にすること
 
 ## ディレクトリ構成
 
@@ -53,7 +84,8 @@ project-root/
 internal/features/<feature>/
 ├── domain/
 │   ├── entity/         # エンティティ、Value Object
-│   └── repository/     # リポジトリインターフェース
+│   ├── repository/     # リポジトリインターフェース
+│   └── dto/            # 機能間データ受け渡し用DTO(必要な場合のみ)
 ├── application/
 │   ├── usecase/        # ユースケース実装
 │   ├── port/           # 外部サービスインターフェース
@@ -74,6 +106,29 @@ Presentation → Application → Domain ← Infrastructure
 
 - 内側の層は外側に依存しない
 - Domain層でインターフェース定義、Infrastructure層で実装
+
+### 依存関係の詳細ルール
+- **Infrastructure → Application の参照禁止**: Infrastructure層からApplication層のインターフェースを直接importしない
+- **型変換はApplication層で**: 異なる機能間のデータ変換はApplication層(Usecase)で行う
+- **機能間の依存方向**: Consumer機能がProvider機能のデータを必要とする場合、Consumer側で入力型を定義し、Application層で変換を行う
+- **sharedパッケージ禁止**: `features/shared/`のような機能間共有パッケージは作成しない
+- **features外からfeaturesへの参照禁止**: `internal/infrastructure/`等からfeaturesパッケージをimportしない(DIを行う`server/`は例外)
+
+### 機能間の型共有パターン
+機能間でデータを受け渡す場合は以下のパターンに従う:
+
+1. **Consumer側でDomain層(dto/)に型を定義**: データを必要とする側(Consumer)がdomain/dto/で入力型を定義
+2. **Consumer側でApplication層にインターフェースを定義**: application/usecase/でProvider向けのインターフェースを定義
+3. **Provider側がConsumerのdto型をimport**: Provider側のinfrastructure層がConsumerのdomain/dto/をimport(Domain層同士なので許容)
+4. **DI層で結合**: `server/router.go`でProvider実装をConsumerに注入
+
+```
+例: import機能がfield機能のリポジトリを利用する場合
+- import/domain/dto/: FieldBatchInput型を定義
+- import/application/usecase/: FieldRepositoryインターフェースを定義(dto型を使用)
+- field/infrastructure/repository/: importdto.FieldBatchInputを受け取るUpsertBatchを実装
+- server/router.go: fieldRepository を ProcessImportUseCase に注入
+```
 
 ## 主要コマンド
 

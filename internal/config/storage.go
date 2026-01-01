@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"github.com/caarlos0/env/v10"
+)
 
 // StorageConfig はS3/RustFS接続設定を保持する
 type StorageConfig struct {
@@ -33,4 +37,13 @@ func (s *StorageConfig) GetPublicEndpoint() string {
 		return s.Endpoint
 	}
 	return s.PublicEndpoint
+}
+
+// LoadStorageConfig はStorage設定を読み込む
+func LoadStorageConfig() (*StorageConfig, error) {
+	cfg := &StorageConfig{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }

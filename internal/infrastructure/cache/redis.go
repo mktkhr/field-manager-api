@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/mktkhr/field-manager-api/internal/config"
-	"github.com/mktkhr/field-manager-api/internal/features/shared/application/port"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -33,7 +32,7 @@ func NewRedisClient(cfg config.CacheConfig) *redis.Client {
 }
 
 // NewCacheStore はCacheConfigからCacheStoreインターフェースを作成する
-func NewCacheStore(cfg config.CacheConfig) port.CacheStore {
+func NewCacheStore(cfg config.CacheConfig) CacheStore {
 	redisClient := NewRedisClient(cfg)
 	return NewClient(redisClient)
 }

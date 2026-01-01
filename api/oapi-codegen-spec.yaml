@@ -1,6 +1,6 @@
 # oapi-codegen設定: OpenAPI仕様埋め込み
 package: openapi
-output: ../internal/generated/openapi/spec.gen.go
+output: internal/generated/openapi/spec.gen.go
 generate:
   models: false
   embedded-spec: true

@@ -39,87 +39,87 @@ func TestLoad(t *testing.T) {
 
 	cfg, err := Load()
 	if err != nil {
-		t.Fatalf("Load() error = %v", err)
+		t.Fatalf("Load()でエラー発生 = %v", err)
 	}
 
 	// Logger defaults
 	if cfg.Logger.Level != "INFO" {
-		t.Errorf("Logger.Level = %q, want %q", cfg.Logger.Level, "INFO")
+		t.Errorf("Logger.Level = %q, 期待値 %q", cfg.Logger.Level, "INFO")
 	}
 	if cfg.Logger.Environment != "development" {
-		t.Errorf("Logger.Environment = %q, want %q", cfg.Logger.Environment, "development")
+		t.Errorf("Logger.Environment = %q, 期待値 %q", cfg.Logger.Environment, "development")
 	}
 
 	// Database defaults
 	if cfg.Database.Host != "localhost" {
-		t.Errorf("Database.Host = %q, want %q", cfg.Database.Host, "localhost")
+		t.Errorf("Database.Host = %q, 期待値 %q", cfg.Database.Host, "localhost")
 	}
 	if cfg.Database.Port != 5432 {
-		t.Errorf("Database.Port = %d, want %d", cfg.Database.Port, 5432)
+		t.Errorf("Database.Port = %d, 期待値 %d", cfg.Database.Port, 5432)
 	}
 	if cfg.Database.User != "postgres" {
-		t.Errorf("Database.User = %q, want %q", cfg.Database.User, "postgres")
+		t.Errorf("Database.User = %q, 期待値 %q", cfg.Database.User, "postgres")
 	}
 	if cfg.Database.Password != "testpassword" {
-		t.Errorf("Database.Password = %q, want %q", cfg.Database.Password, "testpassword")
+		t.Errorf("Database.Password = %q, 期待値 %q", cfg.Database.Password, "testpassword")
 	}
 	if cfg.Database.Name != "field_manager_db" {
-		t.Errorf("Database.Name = %q, want %q", cfg.Database.Name, "field_manager_db")
+		t.Errorf("Database.Name = %q, 期待値 %q", cfg.Database.Name, "field_manager_db")
 	}
 	if cfg.Database.SSLMode != "disable" {
-		t.Errorf("Database.SSLMode = %q, want %q", cfg.Database.SSLMode, "disable")
+		t.Errorf("Database.SSLMode = %q, 期待値 %q", cfg.Database.SSLMode, "disable")
 	}
 
 	// Cache defaults
 	if cfg.Cache.Host != "localhost" {
-		t.Errorf("Cache.Host = %q, want %q", cfg.Cache.Host, "localhost")
+		t.Errorf("Cache.Host = %q, 期待値 %q", cfg.Cache.Host, "localhost")
 	}
 	if cfg.Cache.Port != 6379 {
-		t.Errorf("Cache.Port = %d, want %d", cfg.Cache.Port, 6379)
+		t.Errorf("Cache.Port = %d, 期待値 %d", cfg.Cache.Port, 6379)
 	}
 	if cfg.Cache.Database != 0 {
-		t.Errorf("Cache.Database = %d, want %d", cfg.Cache.Database, 0)
+		t.Errorf("Cache.Database = %d, 期待値 %d", cfg.Cache.Database, 0)
 	}
 	if cfg.Cache.MaxRetries != 3 {
-		t.Errorf("Cache.MaxRetries = %d, want %d", cfg.Cache.MaxRetries, 3)
+		t.Errorf("Cache.MaxRetries = %d, 期待値 %d", cfg.Cache.MaxRetries, 3)
 	}
 	if cfg.Cache.ConnectTimeout != 5*time.Second {
-		t.Errorf("Cache.ConnectTimeout = %v, want %v", cfg.Cache.ConnectTimeout, 5*time.Second)
+		t.Errorf("Cache.ConnectTimeout = %v, 期待値 %v", cfg.Cache.ConnectTimeout, 5*time.Second)
 	}
 	if cfg.Cache.ReadTimeout != 5*time.Second {
-		t.Errorf("Cache.ReadTimeout = %v, want %v", cfg.Cache.ReadTimeout, 5*time.Second)
+		t.Errorf("Cache.ReadTimeout = %v, 期待値 %v", cfg.Cache.ReadTimeout, 5*time.Second)
 	}
 	if cfg.Cache.WriteTimeout != 5*time.Second {
-		t.Errorf("Cache.WriteTimeout = %v, want %v", cfg.Cache.WriteTimeout, 5*time.Second)
+		t.Errorf("Cache.WriteTimeout = %v, 期待値 %v", cfg.Cache.WriteTimeout, 5*time.Second)
 	}
 	if cfg.Cache.PoolSize != 10 {
-		t.Errorf("Cache.PoolSize = %d, want %d", cfg.Cache.PoolSize, 10)
+		t.Errorf("Cache.PoolSize = %d, 期待値 %d", cfg.Cache.PoolSize, 10)
 	}
 	if cfg.Cache.MinIdleConns != 5 {
-		t.Errorf("Cache.MinIdleConns = %d, want %d", cfg.Cache.MinIdleConns, 5)
+		t.Errorf("Cache.MinIdleConns = %d, 期待値 %d", cfg.Cache.MinIdleConns, 5)
 	}
 	if cfg.Cache.TLSEnabled != false {
-		t.Errorf("Cache.TLSEnabled = %v, want %v", cfg.Cache.TLSEnabled, false)
+		t.Errorf("Cache.TLSEnabled = %v, 期待値 %v", cfg.Cache.TLSEnabled, false)
 	}
 
 	// Storage defaults
 	if cfg.Storage.S3Enabled != false {
-		t.Errorf("Storage.S3Enabled = %v, want %v", cfg.Storage.S3Enabled, false)
+		t.Errorf("Storage.S3Enabled = %v, 期待値 %v", cfg.Storage.S3Enabled, false)
 	}
 	if cfg.Storage.Endpoint != "http://localhost:9000" {
-		t.Errorf("Storage.Endpoint = %q, want %q", cfg.Storage.Endpoint, "http://localhost:9000")
+		t.Errorf("Storage.Endpoint = %q, 期待値 %q", cfg.Storage.Endpoint, "http://localhost:9000")
 	}
 	if cfg.Storage.Region != "ap-northeast-1" {
-		t.Errorf("Storage.Region = %q, want %q", cfg.Storage.Region, "ap-northeast-1")
+		t.Errorf("Storage.Region = %q, 期待値 %q", cfg.Storage.Region, "ap-northeast-1")
 	}
 	if cfg.Storage.Bucket != "pts-soa-bucket" {
-		t.Errorf("Storage.Bucket = %q, want %q", cfg.Storage.Bucket, "pts-soa-bucket")
+		t.Errorf("Storage.Bucket = %q, 期待値 %q", cfg.Storage.Bucket, "pts-soa-bucket")
 	}
 	if cfg.Storage.UsePathStyle != true {
-		t.Errorf("Storage.UsePathStyle = %v, want %v", cfg.Storage.UsePathStyle, true)
+		t.Errorf("Storage.UsePathStyle = %v, 期待値 %v", cfg.Storage.UsePathStyle, true)
 	}
 	if cfg.Storage.PresignedURLExpiry != 900*time.Second {
-		t.Errorf("Storage.PresignedURLExpiry = %v, want %v", cfg.Storage.PresignedURLExpiry, 900*time.Second)
+		t.Errorf("Storage.PresignedURLExpiry = %v, 期待値 %v", cfg.Storage.PresignedURLExpiry, 900*time.Second)
 	}
 }
 
@@ -159,99 +159,99 @@ func TestLoadWithCustomValues(t *testing.T) {
 
 	cfg, err := Load()
 	if err != nil {
-		t.Fatalf("Load() error = %v", err)
+		t.Fatalf("Load()でエラー発生 = %v", err)
 	}
 
 	// Logger
 	if cfg.Logger.Level != "DEBUG" {
-		t.Errorf("Logger.Level = %q, want %q", cfg.Logger.Level, "DEBUG")
+		t.Errorf("Logger.Level = %q, 期待値 %q", cfg.Logger.Level, "DEBUG")
 	}
 	if cfg.Logger.Environment != "production" {
-		t.Errorf("Logger.Environment = %q, want %q", cfg.Logger.Environment, "production")
+		t.Errorf("Logger.Environment = %q, 期待値 %q", cfg.Logger.Environment, "production")
 	}
 
 	// Database
 	if cfg.Database.Host != "custom-db-host" {
-		t.Errorf("Database.Host = %q, want %q", cfg.Database.Host, "custom-db-host")
+		t.Errorf("Database.Host = %q, 期待値 %q", cfg.Database.Host, "custom-db-host")
 	}
 	if cfg.Database.Port != 5433 {
-		t.Errorf("Database.Port = %d, want %d", cfg.Database.Port, 5433)
+		t.Errorf("Database.Port = %d, 期待値 %d", cfg.Database.Port, 5433)
 	}
 	if cfg.Database.User != "custom-user" {
-		t.Errorf("Database.User = %q, want %q", cfg.Database.User, "custom-user")
+		t.Errorf("Database.User = %q, 期待値 %q", cfg.Database.User, "custom-user")
 	}
 	if cfg.Database.Password != "custom-password" {
-		t.Errorf("Database.Password = %q, want %q", cfg.Database.Password, "custom-password")
+		t.Errorf("Database.Password = %q, 期待値 %q", cfg.Database.Password, "custom-password")
 	}
 	if cfg.Database.Name != "custom-db" {
-		t.Errorf("Database.Name = %q, want %q", cfg.Database.Name, "custom-db")
+		t.Errorf("Database.Name = %q, 期待値 %q", cfg.Database.Name, "custom-db")
 	}
 	if cfg.Database.SSLMode != "require" {
-		t.Errorf("Database.SSLMode = %q, want %q", cfg.Database.SSLMode, "require")
+		t.Errorf("Database.SSLMode = %q, 期待値 %q", cfg.Database.SSLMode, "require")
 	}
 
 	// Cache
 	if cfg.Cache.Host != "custom-cache-host" {
-		t.Errorf("Cache.Host = %q, want %q", cfg.Cache.Host, "custom-cache-host")
+		t.Errorf("Cache.Host = %q, 期待値 %q", cfg.Cache.Host, "custom-cache-host")
 	}
 	if cfg.Cache.Port != 6380 {
-		t.Errorf("Cache.Port = %d, want %d", cfg.Cache.Port, 6380)
+		t.Errorf("Cache.Port = %d, 期待値 %d", cfg.Cache.Port, 6380)
 	}
 	if cfg.Cache.Password != "cache-password" {
-		t.Errorf("Cache.Password = %q, want %q", cfg.Cache.Password, "cache-password")
+		t.Errorf("Cache.Password = %q, 期待値 %q", cfg.Cache.Password, "cache-password")
 	}
 	if cfg.Cache.Database != 1 {
-		t.Errorf("Cache.Database = %d, want %d", cfg.Cache.Database, 1)
+		t.Errorf("Cache.Database = %d, 期待値 %d", cfg.Cache.Database, 1)
 	}
 	if cfg.Cache.MaxRetries != 5 {
-		t.Errorf("Cache.MaxRetries = %d, want %d", cfg.Cache.MaxRetries, 5)
+		t.Errorf("Cache.MaxRetries = %d, 期待値 %d", cfg.Cache.MaxRetries, 5)
 	}
 	if cfg.Cache.ConnectTimeout != 10*time.Second {
-		t.Errorf("Cache.ConnectTimeout = %v, want %v", cfg.Cache.ConnectTimeout, 10*time.Second)
+		t.Errorf("Cache.ConnectTimeout = %v, 期待値 %v", cfg.Cache.ConnectTimeout, 10*time.Second)
 	}
 	if cfg.Cache.ReadTimeout != 10*time.Second {
-		t.Errorf("Cache.ReadTimeout = %v, want %v", cfg.Cache.ReadTimeout, 10*time.Second)
+		t.Errorf("Cache.ReadTimeout = %v, 期待値 %v", cfg.Cache.ReadTimeout, 10*time.Second)
 	}
 	if cfg.Cache.WriteTimeout != 10*time.Second {
-		t.Errorf("Cache.WriteTimeout = %v, want %v", cfg.Cache.WriteTimeout, 10*time.Second)
+		t.Errorf("Cache.WriteTimeout = %v, 期待値 %v", cfg.Cache.WriteTimeout, 10*time.Second)
 	}
 	if cfg.Cache.PoolSize != 20 {
-		t.Errorf("Cache.PoolSize = %d, want %d", cfg.Cache.PoolSize, 20)
+		t.Errorf("Cache.PoolSize = %d, 期待値 %d", cfg.Cache.PoolSize, 20)
 	}
 	if cfg.Cache.MinIdleConns != 10 {
-		t.Errorf("Cache.MinIdleConns = %d, want %d", cfg.Cache.MinIdleConns, 10)
+		t.Errorf("Cache.MinIdleConns = %d, 期待値 %d", cfg.Cache.MinIdleConns, 10)
 	}
 	if cfg.Cache.TLSEnabled != true {
-		t.Errorf("Cache.TLSEnabled = %v, want %v", cfg.Cache.TLSEnabled, true)
+		t.Errorf("Cache.TLSEnabled = %v, 期待値 %v", cfg.Cache.TLSEnabled, true)
 	}
 
 	// Storage
 	if cfg.Storage.S3Enabled != true {
-		t.Errorf("Storage.S3Enabled = %v, want %v", cfg.Storage.S3Enabled, true)
+		t.Errorf("Storage.S3Enabled = %v, 期待値 %v", cfg.Storage.S3Enabled, true)
 	}
 	if cfg.Storage.Endpoint != "https://s3.amazonaws.com" {
-		t.Errorf("Storage.Endpoint = %q, want %q", cfg.Storage.Endpoint, "https://s3.amazonaws.com")
+		t.Errorf("Storage.Endpoint = %q, 期待値 %q", cfg.Storage.Endpoint, "https://s3.amazonaws.com")
 	}
 	if cfg.Storage.PublicEndpoint != "https://cdn.example.com" {
-		t.Errorf("Storage.PublicEndpoint = %q, want %q", cfg.Storage.PublicEndpoint, "https://cdn.example.com")
+		t.Errorf("Storage.PublicEndpoint = %q, 期待値 %q", cfg.Storage.PublicEndpoint, "https://cdn.example.com")
 	}
 	if cfg.Storage.Region != "us-east-1" {
-		t.Errorf("Storage.Region = %q, want %q", cfg.Storage.Region, "us-east-1")
+		t.Errorf("Storage.Region = %q, 期待値 %q", cfg.Storage.Region, "us-east-1")
 	}
 	if cfg.Storage.Bucket != "my-bucket" {
-		t.Errorf("Storage.Bucket = %q, want %q", cfg.Storage.Bucket, "my-bucket")
+		t.Errorf("Storage.Bucket = %q, 期待値 %q", cfg.Storage.Bucket, "my-bucket")
 	}
 	if cfg.Storage.AccessKeyID != "AKIAIOSFODNN7EXAMPLE" {
-		t.Errorf("Storage.AccessKeyID = %q, want %q", cfg.Storage.AccessKeyID, "AKIAIOSFODNN7EXAMPLE")
+		t.Errorf("Storage.AccessKeyID = %q, 期待値 %q", cfg.Storage.AccessKeyID, "AKIAIOSFODNN7EXAMPLE")
 	}
 	if cfg.Storage.SecretAccessKey != "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" {
-		t.Errorf("Storage.SecretAccessKey = %q, want %q", cfg.Storage.SecretAccessKey, "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+		t.Errorf("Storage.SecretAccessKey = %q, 期待値 %q", cfg.Storage.SecretAccessKey, "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
 	}
 	if cfg.Storage.UsePathStyle != false {
-		t.Errorf("Storage.UsePathStyle = %v, want %v", cfg.Storage.UsePathStyle, false)
+		t.Errorf("Storage.UsePathStyle = %v, 期待値 %v", cfg.Storage.UsePathStyle, false)
 	}
 	if cfg.Storage.PresignedURLExpiry != 1800*time.Second {
-		t.Errorf("Storage.PresignedURLExpiry = %v, want %v", cfg.Storage.PresignedURLExpiry, 1800*time.Second)
+		t.Errorf("Storage.PresignedURLExpiry = %v, 期待値 %v", cfg.Storage.PresignedURLExpiry, 1800*time.Second)
 	}
 }
 
@@ -261,7 +261,7 @@ func TestLoadMissingRequiredEnv(t *testing.T) {
 
 	_, err := Load()
 	if err == nil {
-		t.Error("Load() should return error when required env is missing")
+		t.Error("Load()は必須環境変数が欠落している場合にエラーを返すべき")
 	}
 }
 
@@ -293,7 +293,7 @@ func TestStorageConfigGetPublicEndpoint(t *testing.T) {
 				PublicEndpoint: tt.publicEndpoint,
 			}
 			if got := s.GetPublicEndpoint(); got != tt.want {
-				t.Errorf("GetPublicEndpoint() = %q, want %q", got, tt.want)
+				t.Errorf("GetPublicEndpoint() = %q, 期待値 %q", got, tt.want)
 			}
 		})
 	}
@@ -333,7 +333,7 @@ func TestLoggerConfigIsProduction(t *testing.T) {
 				Environment: tt.environment,
 			}
 			if got := c.IsProduction(); got != tt.want {
-				t.Errorf("IsProduction() = %v, want %v", got, tt.want)
+				t.Errorf("IsProduction() = %v, 期待値 %v", got, tt.want)
 			}
 		})
 	}

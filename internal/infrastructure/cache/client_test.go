@@ -13,7 +13,7 @@ func setupTestRedis(t *testing.T) (*miniredis.Miniredis, *Client) {
 	t.Helper()
 	mr, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("miniredis.Run() failed: %v", err)
+		t.Fatalf("miniredis.Run()が失敗しました: %v", err)
 	}
 
 	redisClient := redis.NewClient(&redis.Options{
@@ -29,15 +29,15 @@ func TestNewClient(t *testing.T) {
 	defer mr.Close()
 	defer func() {
 		if err := client.Close(); err != nil {
-			t.Errorf("Close() error = %v", err)
+			t.Errorf("Close()でエラー発生 = %v", err)
 		}
 	}()
 
 	if client == nil {
-		t.Fatal("NewClient() should not return nil")
+		t.Fatal("NewClient()はnilを返すべきではない")
 	}
 	if client.client == nil {
-		t.Error("NewClient() should set internal redis client")
+		t.Error("NewClient()は内部のRedisクライアントを設定すべき")
 	}
 }
 
@@ -46,7 +46,7 @@ func TestClient_SetAndGet(t *testing.T) {
 	defer mr.Close()
 	defer func() {
 		if err := client.Close(); err != nil {
-			t.Errorf("Close() error = %v", err)
+			t.Errorf("Close()でエラー発生 = %v", err)
 		}
 	}()
 
@@ -55,22 +55,22 @@ func TestClient_SetAndGet(t *testing.T) {
 	t.Run("値の設定と取得", func(t *testing.T) {
 		err := client.Set(ctx, "test-key", "test-value", time.Minute)
 		if err != nil {
-			t.Errorf("Set() error = %v", err)
+			t.Errorf("Set()でエラー発生 = %v", err)
 		}
 
 		value, err := client.Get(ctx, "test-key")
 		if err != nil {
-			t.Errorf("Get() error = %v", err)
+			t.Errorf("Get()でエラー発生 = %v", err)
 		}
 		if value != "test-value" {
-			t.Errorf("Get() = %v, want %v", value, "test-value")
+			t.Errorf("Get() = %v, 期待値 %v", value, "test-value")
 		}
 	})
 
 	t.Run("存在しないキーの取得", func(t *testing.T) {
 		_, err := client.Get(ctx, "non-existent-key")
 		if err == nil {
-			t.Error("Get() should return error for non-existent key")
+			t.Error("Get()は存在しないキーに対してエラーを返すべき")
 		}
 	})
 }
@@ -80,7 +80,7 @@ func TestClient_Delete(t *testing.T) {
 	defer mr.Close()
 	defer func() {
 		if err := client.Close(); err != nil {
-			t.Errorf("Close() error = %v", err)
+			t.Errorf("Close()でエラー発生 = %v", err)
 		}
 	}()
 
@@ -89,19 +89,19 @@ func TestClient_Delete(t *testing.T) {
 	// 値を設定
 	err := client.Set(ctx, "delete-key", "value", time.Minute)
 	if err != nil {
-		t.Fatalf("Set() error = %v", err)
+		t.Fatalf("Set()でエラー発生 = %v", err)
 	}
 
 	// 削除
 	err = client.Delete(ctx, "delete-key")
 	if err != nil {
-		t.Errorf("Delete() error = %v", err)
+		t.Errorf("Delete()でエラー発生 = %v", err)
 	}
 
 	// 削除後は取得できない
 	_, err = client.Get(ctx, "delete-key")
 	if err == nil {
-		t.Error("Get() should return error after Delete()")
+		t.Error("Get()はDelete()後にエラーを返すべき")
 	}
 }
 
@@ -110,7 +110,7 @@ func TestClient_Ping(t *testing.T) {
 	defer mr.Close()
 	defer func() {
 		if err := client.Close(); err != nil {
-			t.Errorf("Close() error = %v", err)
+			t.Errorf("Close()でエラー発生 = %v", err)
 		}
 	}()
 
@@ -118,7 +118,7 @@ func TestClient_Ping(t *testing.T) {
 
 	err := client.Ping(ctx)
 	if err != nil {
-		t.Errorf("Ping() error = %v", err)
+		t.Errorf("Ping()でエラー発生 = %v", err)
 	}
 }
 
@@ -128,7 +128,7 @@ func TestClient_Close(t *testing.T) {
 
 	err := client.Close()
 	if err != nil {
-		t.Errorf("Close() error = %v", err)
+		t.Errorf("Close()でエラー発生 = %v", err)
 	}
 }
 
@@ -137,7 +137,7 @@ func TestClient_SetWithTTL(t *testing.T) {
 	defer mr.Close()
 	defer func() {
 		if err := client.Close(); err != nil {
-			t.Errorf("Close() error = %v", err)
+			t.Errorf("Close()でエラー発生 = %v", err)
 		}
 	}()
 
@@ -145,16 +145,16 @@ func TestClient_SetWithTTL(t *testing.T) {
 
 	err := client.Set(ctx, "ttl-key", "ttl-value", 100*time.Millisecond)
 	if err != nil {
-		t.Fatalf("Set() error = %v", err)
+		t.Fatalf("Set()でエラー発生 = %v", err)
 	}
 
 	// 値が存在することを確認
 	value, err := client.Get(ctx, "ttl-key")
 	if err != nil {
-		t.Errorf("Get() error = %v", err)
+		t.Errorf("Get()でエラー発生 = %v", err)
 	}
 	if value != "ttl-value" {
-		t.Errorf("Get() = %v, want %v", value, "ttl-value")
+		t.Errorf("Get() = %v, 期待値 %v", value, "ttl-value")
 	}
 
 	// TTL経過後
@@ -162,6 +162,6 @@ func TestClient_SetWithTTL(t *testing.T) {
 
 	_, err = client.Get(ctx, "ttl-key")
 	if err == nil {
-		t.Error("Get() should return error after TTL expired")
+		t.Error("Get()はTTL経過後にエラーを返すべき")
 	}
 }

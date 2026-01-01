@@ -51,3 +51,7 @@ debug
 
 # ENV
 .env
+*.out
+cmd/wagri-fetcher/bootstrap
+cmd/wagri-fetcher/wagri-fetcher.zip
+import-processor

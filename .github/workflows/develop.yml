@@ -5,7 +5,7 @@ on:
     branches: [develop]
 
 env:
-  GO_VERSION: '1.25.5'
+  GO_VERSION: "1.25.5"
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/app
 
@@ -60,7 +60,7 @@ jobs:
         env:
           POSTGRES_HOST: postgres
           POSTGRES_PORT: 5432
-          POSTGRES_DB: opt_app_test
+          POSTGRES_DB: field_manager_db_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -73,7 +73,7 @@ jobs:
     env:
       DB_HOST: localhost
       DB_PORT: 5432
-      DB_NAME: opt_app_test
+      DB_NAME: field_manager_db_test
       DB_USER: postgres
       DB_PASSWORD: postgres
       DB_SSL_MODE: disable
@@ -108,9 +108,9 @@ jobs:
       postgres:
         image: postgis/postgis:17-3.5
         env:
-          POSTGRES_DB: opt_app
+          POSTGRES_DB: field_manager_db
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: optimoptim
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
@@ -127,14 +127,14 @@ jobs:
       - name: Run migrations
         run: |
           go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
-          migrate -path db/migrations -database "postgres://postgres:optimoptim@localhost:5432/opt_app?sslmode=disable" up
+          migrate -path db/migrations -database "postgres://postgres:postgres@localhost:5432/field_manager_db?sslmode=disable" up
 
       # Setup Java for SchemaSpy
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
 
       # Generate SchemaSpy
       - name: Generate SchemaSpy
@@ -145,18 +145,18 @@ jobs:
           java -jar schemaspy.jar \
             -t pgsql \
             -dp postgresql-jdbc.jar \
-            -db opt_app \
+            -db field_manager_db \
             -host localhost \
             -port 5432 \
             -u postgres \
-            -p optimoptim \
+            -p postgres \
             -s public \
             -o schema-output
 
       # Setup Node.js for Redocly
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
 
       # Generate API docs
       - name: Generate API docs

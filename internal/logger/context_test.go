@@ -13,7 +13,7 @@ func TestWithRequestID(t *testing.T) {
 	newCtx := WithRequestID(ctx, requestID)
 
 	if got := newCtx.Value(RequestIDContextKey); got != requestID {
-		t.Errorf("WithRequestID() = %v, want %v", got, requestID)
+		t.Errorf("WithRequestID() = %v, 期待値 %v", got, requestID)
 	}
 }
 
@@ -43,7 +43,7 @@ func TestGetRequestIDFromContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := GetRequestIDFromContext(tt.ctx); got != tt.want {
-				t.Errorf("GetRequestIDFromContext() = %v, want %v", got, tt.want)
+				t.Errorf("GetRequestIDFromContext() = %v, 期待値 %v", got, tt.want)
 			}
 		})
 	}
@@ -56,7 +56,7 @@ func TestWithLogger(t *testing.T) {
 	newCtx := WithLogger(ctx, logger)
 
 	if got := newCtx.Value(LoggerContextKey); got != logger {
-		t.Errorf("WithLogger() did not set logger correctly")
+		t.Errorf("WithLogger()でロガーが正しく設定されませんでした")
 	}
 }
 
@@ -84,7 +84,7 @@ func TestGetLoggerFromContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := GetLoggerFromContext(tt.ctx)
 			if got == nil {
-				t.Error("GetLoggerFromContext() should not return nil")
+				t.Error("GetLoggerFromContext()はnilを返すべきではない")
 			}
 		})
 	}
@@ -94,7 +94,7 @@ func TestNewRequestLogger(t *testing.T) {
 	logger := NewRequestLogger("req-123", "Mozilla/5.0", "192.168.1.1")
 
 	if logger == nil {
-		t.Error("NewRequestLogger() should not return nil")
+		t.Error("NewRequestLogger()はnilを返すべきではない")
 	}
 }
 

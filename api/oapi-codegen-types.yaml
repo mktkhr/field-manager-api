@@ -1,6 +1,6 @@
 # oapi-codegen設定: 型定義生成
 package: openapi
-output: ../internal/generated/openapi/types.gen.go
+output: internal/generated/openapi/types.gen.go
 generate:
   models: true
   embedded-spec: false
