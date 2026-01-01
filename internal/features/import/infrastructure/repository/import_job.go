@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -148,7 +149,10 @@ func (r *importJobRepository) toEntity(row *sqlc.ImportJob) *entity.ImportJob {
 
 	if len(row.FailedRecordIds) > 0 {
 		var ids []string
-		if err := json.Unmarshal(row.FailedRecordIds, &ids); err == nil {
+		if err := json.Unmarshal(row.FailedRecordIds, &ids); err != nil {
+			// DBに保存されたJSONは通常有効なはずだが、デバッグのためにログ出力
+			slog.Warn("失敗レコードIDのパースに失敗", "job_id", row.ID, "error", err)
+		} else {
 			job.FailedRecordIDs = ids
 		}
 	}
