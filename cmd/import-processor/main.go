@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 
 	"github.com/google/uuid"
@@ -115,9 +116,15 @@ func loadDatabaseConfig() (*config.DatabaseConfig, error) {
 
 // createDBPool はデータベース接続プールを作成する
 func createDBPool(ctx context.Context, cfg *config.DatabaseConfig) (*pgxpool.Pool, error) {
+	// パスワードに特殊文字が含まれる場合に備えてURLエンコードを使用
 	connString := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name, cfg.SSLMode,
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		url.QueryEscape(cfg.User),
+		url.QueryEscape(cfg.Password),
+		cfg.Host,
+		cfg.Port,
+		cfg.Name,
+		cfg.SSLMode,
 	)
 	return pgxpool.New(ctx, connString)
 }
