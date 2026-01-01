@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
 )
 
@@ -270,20 +271,35 @@ func TestS3Client_Exists(t *testing.T) {
 		key      string
 		mockFunc func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 		want     bool
+		wantErr  bool
 	}{
+		// 正常系: オブジェクトが存在する場合はtrueを返す
 		{
 			name:     "exists",
 			key:      "test/file.json",
 			mockFunc: nil,
 			want:     true,
+			wantErr:  false,
 		},
+		// 正常系: オブジェクトが存在しない場合(NotFound)はfalseを返しエラーなし
 		{
 			name: "not exists",
 			key:  "test/nonexistent.json",
 			mockFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
-				return nil, errors.New("NoSuchKey")
+				return nil, &types.NotFound{}
 			},
-			want: false,
+			want:    false,
+			wantErr: false,
+		},
+		// 異常系: ネットワークエラー等はエラーとして返す
+		{
+			name: "network error",
+			key:  "test/file.json",
+			mockFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+				return nil, errors.New("ネットワークエラー")
+			},
+			want:    false,
+			wantErr: true,
 		},
 	}
 
@@ -298,6 +314,12 @@ func TestS3Client_Exists(t *testing.T) {
 			}
 
 			exists, err := client.Exists(context.Background(), tt.key)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Exists()でエラーを期待したがnilが返された")
+				}
+				return
+			}
 			if err != nil {
 				t.Errorf("Exists() error = %v", err)
 				return

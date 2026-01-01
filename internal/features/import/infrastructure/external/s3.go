@@ -2,12 +2,14 @@ package external
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	appConfig "github.com/mktkhr/field-manager-api/internal/config"
 	"github.com/mktkhr/field-manager-api/internal/features/import/application/port"
 )
@@ -156,7 +158,13 @@ func (c *s3Client) Exists(ctx context.Context, key string) (bool, error) {
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return false, nil
+		// NotFoundエラーの場合は存在しないと判断
+		var notFound *types.NotFound
+		if errors.As(err, &notFound) {
+			return false, nil
+		}
+		// その他のエラー(ネットワークエラー、権限エラー等)はエラーとして返す
+		return false, err
 	}
 	return true, nil
 }
