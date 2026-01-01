@@ -134,6 +134,11 @@ func ConvertLinearPolygonToPolygon(coordinates [][]float64) (*geom.Polygon, erro
 		return nil, nil
 	}
 
+	// ポリゴンには最低3点が必要
+	if len(coordinates) < 3 {
+		return nil, fmt.Errorf("ポリゴンには最低3点が必要です(現在: %d点)", len(coordinates))
+	}
+
 	coords := make([]geom.Coord, len(coordinates))
 	for i, coord := range coordinates {
 		if len(coord) < 2 {

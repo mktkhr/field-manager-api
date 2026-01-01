@@ -185,12 +185,14 @@ func TestConvertLinearPolygonToPolygon(t *testing.T) {
 		wantNil     bool
 		wantErr     bool
 	}{
+		// 正常系: 空の座標はnilを返す
 		{
 			name:        "empty coordinates",
 			coordinates: [][]float64{},
 			wantNil:     true,
 			wantErr:     false,
 		},
+		// 正常系: 有効な三角形(3点)はポリゴンを返す
 		{
 			name: "valid triangle",
 			coordinates: [][]float64{
@@ -201,6 +203,7 @@ func TestConvertLinearPolygonToPolygon(t *testing.T) {
 			wantNil: false,
 			wantErr: false,
 		},
+		// 正常系: 閉じたポリゴンも正常に処理する
 		{
 			name: "already closed polygon",
 			coordinates: [][]float64{
@@ -211,6 +214,25 @@ func TestConvertLinearPolygonToPolygon(t *testing.T) {
 			},
 			wantNil: false,
 			wantErr: false,
+		},
+		// 異常系: 2点のみはエラーを返す
+		{
+			name: "insufficient points - 2 points",
+			coordinates: [][]float64{
+				{139.0, 35.0},
+				{139.1, 35.0},
+			},
+			wantNil: false,
+			wantErr: true,
+		},
+		// 異常系: 1点のみはエラーを返す
+		{
+			name: "insufficient points - 1 point",
+			coordinates: [][]float64{
+				{139.0, 35.0},
+			},
+			wantNil: false,
+			wantErr: true,
 		},
 	}
 
