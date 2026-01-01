@@ -142,7 +142,7 @@ func (c *wagriClient) FetchFieldsByCityCodeToStream(ctx context.Context, cityCod
 		return nil, fmt.Errorf("トークン取得に失敗: %w", err)
 	}
 
-	apiURL := fmt.Sprintf("%s/api/v1/fields?cityCode=%s", c.baseURL, cityCode)
+	apiURL := fmt.Sprintf("%s/api/v1/fields?cityCode=%s", c.baseURL, url.QueryEscape(cityCode))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
