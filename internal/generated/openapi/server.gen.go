@@ -17,6 +17,9 @@ import (
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// クラスター一覧取得
+	// (GET /api/v1/clusters)
+	GetClusters(c *gin.Context, params GetClustersParams)
 	// 圃場一覧取得
 	// (GET /api/v1/fields)
 	ListFields(c *gin.Context, params ListFieldsParams)
@@ -42,6 +45,99 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(c *gin.Context)
+
+// GetClusters operation middleware
+func (siw *ServerInterfaceWrapper) GetClusters(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetClustersParams
+
+	// ------------- Required query parameter "zoom" -------------
+
+	if paramValue := c.Query("zoom"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument zoom is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "zoom", c.Request.URL.Query(), &params.Zoom)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter zoom: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Required query parameter "sw_lat" -------------
+
+	if paramValue := c.Query("sw_lat"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument sw_lat is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "sw_lat", c.Request.URL.Query(), &params.SwLat)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter sw_lat: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Required query parameter "sw_lng" -------------
+
+	if paramValue := c.Query("sw_lng"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument sw_lng is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "sw_lng", c.Request.URL.Query(), &params.SwLng)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter sw_lng: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Required query parameter "ne_lat" -------------
+
+	if paramValue := c.Query("ne_lat"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument ne_lat is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "ne_lat", c.Request.URL.Query(), &params.NeLat)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter ne_lat: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Required query parameter "ne_lng" -------------
+
+	if paramValue := c.Query("ne_lng"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument ne_lng is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "ne_lng", c.Request.URL.Query(), &params.NeLng)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter ne_lng: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetClusters(c, params)
+}
 
 // ListFields operation middleware
 func (siw *ServerInterfaceWrapper) ListFields(c *gin.Context) {
@@ -178,11 +274,47 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 		ErrorHandler:       errorHandler,
 	}
 
+	router.GET(options.BaseURL+"/api/v1/clusters", wrapper.GetClusters)
 	router.GET(options.BaseURL+"/api/v1/fields", wrapper.ListFields)
 	router.GET(options.BaseURL+"/api/v1/fields/:fieldId", wrapper.GetField)
 	router.POST(options.BaseURL+"/api/v1/imports", wrapper.RequestImport)
 	router.GET(options.BaseURL+"/api/v1/imports/:importId", wrapper.GetImportStatus)
 	router.GET(options.BaseURL+"/health", wrapper.HealthCheck)
+}
+
+type GetClustersRequestObject struct {
+	Params GetClustersParams
+}
+
+type GetClustersResponseObject interface {
+	VisitGetClustersResponse(w http.ResponseWriter) error
+}
+
+type GetClusters200JSONResponse ClusterListResponse
+
+func (response GetClusters200JSONResponse) VisitGetClustersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetClusters400JSONResponse ErrorResponse
+
+func (response GetClusters400JSONResponse) VisitGetClustersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetClusters500JSONResponse ErrorResponse
+
+func (response GetClusters500JSONResponse) VisitGetClustersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type ListFieldsRequestObject struct {
@@ -361,6 +493,9 @@ func (response HealthCheck503JSONResponse) VisitHealthCheckResponse(w http.Respo
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// クラスター一覧取得
+	// (GET /api/v1/clusters)
+	GetClusters(ctx context.Context, request GetClustersRequestObject) (GetClustersResponseObject, error)
 	// 圃場一覧取得
 	// (GET /api/v1/fields)
 	ListFields(ctx context.Context, request ListFieldsRequestObject) (ListFieldsResponseObject, error)
@@ -388,6 +523,33 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
+}
+
+// GetClusters operation middleware
+func (sh *strictHandler) GetClusters(ctx *gin.Context, params GetClustersParams) {
+	var request GetClustersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetClusters(ctx, request.(GetClustersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetClusters")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetClustersResponseObject); ok {
+		if err := validResponse.VisitGetClustersResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ListFields operation middleware
