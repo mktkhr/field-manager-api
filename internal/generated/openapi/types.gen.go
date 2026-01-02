@@ -104,6 +104,15 @@ type ImportStatus struct {
 // ImportStatusStatus defines model for ImportStatus.Status.
 type ImportStatusStatus string
 
+// RecalculateResponse defines model for RecalculateResponse.
+type RecalculateResponse struct {
+	// Enqueued ジョブがエンキューされたかどうか
+	Enqueued bool `json:"enqueued"`
+
+	// Message 処理結果メッセージ
+	Message string `json:"message"`
+}
+
 // GetClustersParams defines parameters for GetClusters.
 type GetClustersParams struct {
 	// Zoom Google Mapsのズームレベル(1.0-22.0、少数対応)

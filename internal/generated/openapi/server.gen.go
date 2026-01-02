@@ -20,6 +20,9 @@ type ServerInterface interface {
 	// クラスター一覧取得
 	// (GET /api/v1/clusters)
 	GetClusters(c *gin.Context, params GetClustersParams)
+	// クラスター再計算リクエスト
+	// (POST /api/v1/clusters/recalculate)
+	RecalculateClusters(c *gin.Context)
 	// 圃場一覧取得
 	// (GET /api/v1/fields)
 	ListFields(c *gin.Context, params ListFieldsParams)
@@ -137,6 +140,19 @@ func (siw *ServerInterfaceWrapper) GetClusters(c *gin.Context) {
 	}
 
 	siw.Handler.GetClusters(c, params)
+}
+
+// RecalculateClusters operation middleware
+func (siw *ServerInterfaceWrapper) RecalculateClusters(c *gin.Context) {
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.RecalculateClusters(c)
 }
 
 // ListFields operation middleware
@@ -275,6 +291,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	}
 
 	router.GET(options.BaseURL+"/api/v1/clusters", wrapper.GetClusters)
+	router.POST(options.BaseURL+"/api/v1/clusters/recalculate", wrapper.RecalculateClusters)
 	router.GET(options.BaseURL+"/api/v1/fields", wrapper.ListFields)
 	router.GET(options.BaseURL+"/api/v1/fields/:fieldId", wrapper.GetField)
 	router.POST(options.BaseURL+"/api/v1/imports", wrapper.RequestImport)
@@ -311,6 +328,40 @@ func (response GetClusters400JSONResponse) VisitGetClustersResponse(w http.Respo
 type GetClusters500JSONResponse ErrorResponse
 
 func (response GetClusters500JSONResponse) VisitGetClustersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecalculateClustersRequestObject struct {
+}
+
+type RecalculateClustersResponseObject interface {
+	VisitRecalculateClustersResponse(w http.ResponseWriter) error
+}
+
+type RecalculateClusters202JSONResponse RecalculateResponse
+
+func (response RecalculateClusters202JSONResponse) VisitRecalculateClustersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(202)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecalculateClusters409JSONResponse ErrorResponse
+
+func (response RecalculateClusters409JSONResponse) VisitRecalculateClustersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecalculateClusters500JSONResponse ErrorResponse
+
+func (response RecalculateClusters500JSONResponse) VisitRecalculateClustersResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -496,6 +547,9 @@ type StrictServerInterface interface {
 	// クラスター一覧取得
 	// (GET /api/v1/clusters)
 	GetClusters(ctx context.Context, request GetClustersRequestObject) (GetClustersResponseObject, error)
+	// クラスター再計算リクエスト
+	// (POST /api/v1/clusters/recalculate)
+	RecalculateClusters(ctx context.Context, request RecalculateClustersRequestObject) (RecalculateClustersResponseObject, error)
 	// 圃場一覧取得
 	// (GET /api/v1/fields)
 	ListFields(ctx context.Context, request ListFieldsRequestObject) (ListFieldsResponseObject, error)
@@ -545,6 +599,31 @@ func (sh *strictHandler) GetClusters(ctx *gin.Context, params GetClustersParams)
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(GetClustersResponseObject); ok {
 		if err := validResponse.VisitGetClustersResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecalculateClusters operation middleware
+func (sh *strictHandler) RecalculateClusters(ctx *gin.Context) {
+	var request RecalculateClustersRequestObject
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.RecalculateClusters(ctx, request.(RecalculateClustersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecalculateClusters")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(RecalculateClustersResponseObject); ok {
+		if err := validResponse.VisitRecalculateClustersResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

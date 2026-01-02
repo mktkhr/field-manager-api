@@ -270,6 +270,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/clusters/recalculate:
+    post:
+      tags:
+        - clusters
+      summary: クラスター再計算リクエスト
+      description: |
+        クラスターの再計算ジョブをエンキューする。
+        既に保留中または処理中のジョブがある場合はスキップされる。
+      operationId: recalculateClusters
+      security: []
+      responses:
+        "202":
+          description: 再計算ジョブ受付
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecalculateResponse"
+        "409":
+          description: 既に再計算ジョブが実行中
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthResponse:
@@ -442,3 +472,17 @@ components:
         isStale:
           type: boolean
           description: クラスターが再計算中かどうか
+
+    RecalculateResponse:
+      type: object
+      required:
+        - message
+        - enqueued
+      properties:
+        message:
+          type: string
+          description: 処理結果メッセージ
+          example: "クラスター再計算ジョブをエンキューしました"
+        enqueued:
+          type: boolean
+          description: ジョブがエンキューされたかどうか
