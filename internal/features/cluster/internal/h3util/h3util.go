@@ -62,7 +62,13 @@ func (bb *BoundingBox) Contains(lat, lng float64) bool {
 }
 
 // ZoomToResolution はズームレベルからH3解像度を決定する
-// res3, res5, res7, res9の4解像度を使用
+//
+// ズームレベル対応:
+//
+//	zoom 0-5:   res3 (約100km - 地方レベル)
+//	zoom 6-9:   res5 (約10km - 都道府県レベル)
+//	zoom 10-13: res7 (約1km - 市区町村レベル)
+//	zoom 14-22: res9 (約100m - 詳細レベル)
 func ZoomToResolution(zoom float64) entity.Resolution {
 	switch {
 	case zoom < 6:
