@@ -11,7 +11,8 @@ import (
 
 // EnqueueJobInput はジョブエンキューユースケースの入力
 type EnqueueJobInput struct {
-	Priority int32 // 優先度（高いほど先に処理）
+	Priority        int32    // 優先度（高いほど先に処理）
+	AffectedH3Cells []string // 影響を受けたH3セル(nil=全範囲再計算)
 }
 
 // EnqueueJobOutput はジョブエンキューユースケースの出力
@@ -51,41 +52,57 @@ func (u *EnqueueJobUseCase) Execute(ctx context.Context, input EnqueueJobInput) 
 	}
 
 	// 新しいジョブを作成
-	job := entity.NewClusterJob(input.Priority)
-
-	if err := u.jobRepo.Create(ctx, job); err != nil {
-		return EnqueueJobOutput{}, err
+	var job *entity.ClusterJob
+	if len(input.AffectedH3Cells) > 0 {
+		// 差分更新用ジョブ
+		job = entity.NewClusterJobWithAffectedCells(input.Priority, input.AffectedH3Cells)
+		if err := u.jobRepo.CreateWithAffectedCells(ctx, job); err != nil {
+			return EnqueueJobOutput{}, err
+		}
+		u.logger.Info("差分更新用クラスタージョブをエンキューしました",
+			slog.String("job_id", job.ID.String()),
+			slog.Int("priority", int(input.Priority)),
+			slog.Int("affected_cells", len(input.AffectedH3Cells)))
+	} else {
+		// 全範囲再計算用ジョブ
+		job = entity.NewClusterJob(input.Priority)
+		if err := u.jobRepo.Create(ctx, job); err != nil {
+			return EnqueueJobOutput{}, err
+		}
+		u.logger.Info("全範囲再計算用クラスタージョブをエンキューしました",
+			slog.String("job_id", job.ID.String()),
+			slog.Int("priority", int(input.Priority)))
 	}
-
-	u.logger.Info("クラスタージョブをエンキューしました",
-		slog.String("job_id", job.ID.String()),
-		slog.Int("priority", int(input.Priority)))
 
 	return EnqueueJobOutput{Enqueued: true}, nil
 }
 
-// ClusterJobEnqueuer はimport機能から使用するインターフェース
-// import機能のConsumer側で定義されるインターフェースに対応
-type ClusterJobEnqueuer interface {
-	Enqueue(ctx context.Context, priority int32) error
-}
-
-// enqueueJobAdapter はClusterJobEnqueuerの実装
-type enqueueJobAdapter struct {
+// ClusterJobEnqueuerAdapter はimport機能から使用するアダプタ
+// import機能のConsumer側で定義されるClusterJobEnqueuerインターフェースに対応
+type ClusterJobEnqueuerAdapter struct {
 	usecase *EnqueueJobUseCase
 }
 
-// NewClusterJobEnqueuer はClusterJobEnqueuerを作成する
-func NewClusterJobEnqueuer(usecase *EnqueueJobUseCase) ClusterJobEnqueuer {
-	return &enqueueJobAdapter{
+// NewClusterJobEnqueuer はClusterJobEnqueuerAdapterを作成する
+func NewClusterJobEnqueuer(usecase *EnqueueJobUseCase) *ClusterJobEnqueuerAdapter {
+	return &ClusterJobEnqueuerAdapter{
 		usecase: usecase,
 	}
 }
 
-// Enqueue はジョブをエンキューする
-func (a *enqueueJobAdapter) Enqueue(ctx context.Context, priority int32) error {
+// Enqueue はジョブをエンキューする(全範囲再計算)
+func (a *ClusterJobEnqueuerAdapter) Enqueue(ctx context.Context, priority int32) error {
 	_, err := a.usecase.Execute(ctx, EnqueueJobInput{
 		Priority: priority,
+	})
+	return err
+}
+
+// EnqueueWithAffectedCells は影響セル情報付きでジョブをエンキューする(差分更新)
+func (a *ClusterJobEnqueuerAdapter) EnqueueWithAffectedCells(ctx context.Context, priority int32, affectedCells []string) error {
+	_, err := a.usecase.Execute(ctx, EnqueueJobInput{
+		Priority:        priority,
+		AffectedH3Cells: affectedCells,
 	})
 	return err
 }

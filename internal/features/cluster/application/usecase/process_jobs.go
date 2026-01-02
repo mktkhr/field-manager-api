@@ -39,8 +39,8 @@ func (u *ProcessJobsUseCase) Execute(ctx context.Context, input ProcessJobsInput
 	u.logger.Info("ジョブ処理を開始します",
 		slog.Int("batch_size", int(input.BatchSize)))
 
-	// 保留中のジョブを取得（排他ロック付き）
-	jobs, err := u.jobRepo.FindPendingJobs(ctx, input.BatchSize)
+	// 保留中のジョブを取得（排他ロック付き、影響セル情報付き）
+	jobs, err := u.jobRepo.FindPendingJobsWithAffectedCells(ctx, input.BatchSize)
 	if err != nil {
 		return fmt.Errorf("ジョブの取得に失敗しました: %w", err)
 	}
@@ -55,8 +55,11 @@ func (u *ProcessJobsUseCase) Execute(ctx context.Context, input ProcessJobsInput
 
 	// 各ジョブを処理
 	for _, job := range jobs {
+		isFullRecalc := job.IsFullRecalculation()
 		u.logger.Info("ジョブの処理を開始します",
-			slog.String("job_id", job.ID.String()))
+			slog.String("job_id", job.ID.String()),
+			slog.Bool("full_recalculation", isFullRecalc),
+			slog.Int("affected_cells", len(job.AffectedH3Cells)))
 
 		// ジョブを処理中に更新
 		if err := u.jobRepo.UpdateToProcessing(ctx, job.ID); err != nil {
@@ -66,8 +69,11 @@ func (u *ProcessJobsUseCase) Execute(ctx context.Context, input ProcessJobsInput
 			continue
 		}
 
-		// クラスター計算を実行
-		if err := u.calculateUC.Execute(ctx); err != nil {
+		// クラスター計算を実行(影響セル情報を渡す)
+		calcInput := CalculateClustersInput{
+			AffectedH3Cells: job.AffectedH3Cells,
+		}
+		if err := u.calculateUC.Execute(ctx, calcInput); err != nil {
 			u.logger.Error("クラスター計算に失敗しました",
 				slog.String("job_id", job.ID.String()),
 				slog.String("error", err.Error()))
