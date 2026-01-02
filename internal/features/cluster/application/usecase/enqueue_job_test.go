@@ -25,9 +25,10 @@ func TestEnqueueJobUseCase_Execute_Success(t *testing.T) {
 
 	uc := NewEnqueueJobUseCase(jobRepo, logger)
 
-	err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
+	output, err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
 
 	require.NoError(t, err, "Executeでエラーが発生")
+	require.True(t, output.Enqueued, "ジョブがエンキューされるべき")
 }
 
 // TestEnqueueJobUseCase_Execute_SkipWhenPendingJobExists は保留中ジョブがある場合にスキップすることをテストする
@@ -37,9 +38,10 @@ func TestEnqueueJobUseCase_Execute_SkipWhenPendingJobExists(t *testing.T) {
 
 	uc := NewEnqueueJobUseCase(jobRepo, logger)
 
-	err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
+	output, err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
 
 	require.NoError(t, err, "既存ジョブがある場合はスキップしてエラーなしで終了するべき")
+	require.False(t, output.Enqueued, "既存ジョブがある場合はEnqueuedがfalseになるべき")
 }
 
 // TestEnqueueJobUseCase_Execute_HasPendingJobError は保留中ジョブ確認でエラー時にエラーを返すことをテストする
@@ -49,7 +51,7 @@ func TestEnqueueJobUseCase_Execute_HasPendingJobError(t *testing.T) {
 
 	uc := NewEnqueueJobUseCase(jobRepo, logger)
 
-	err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
+	_, err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
 
 	require.Error(t, err, "DB確認エラー時はエラーを返すべき")
 }
@@ -64,7 +66,7 @@ func TestEnqueueJobUseCase_Execute_CreateError(t *testing.T) {
 
 	uc := NewEnqueueJobUseCase(jobRepo, logger)
 
-	err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
+	_, err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 10})
 
 	require.Error(t, err, "ジョブ作成エラー時はエラーを返すべき")
 }
@@ -76,9 +78,10 @@ func TestEnqueueJobUseCase_Execute_ZeroPriority(t *testing.T) {
 
 	uc := NewEnqueueJobUseCase(jobRepo, logger)
 
-	err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 0})
+	output, err := uc.Execute(context.Background(), EnqueueJobInput{Priority: 0})
 
 	require.NoError(t, err, "優先度0でもエンキューできるべき")
+	require.True(t, output.Enqueued, "優先度0でもエンキューされるべき")
 }
 
 // TestEnqueueJobUseCase_Execute_NegativePriority は負の優先度でもエンキューできることをテストする
@@ -88,9 +91,10 @@ func TestEnqueueJobUseCase_Execute_NegativePriority(t *testing.T) {
 
 	uc := NewEnqueueJobUseCase(jobRepo, logger)
 
-	err := uc.Execute(context.Background(), EnqueueJobInput{Priority: -5})
+	output, err := uc.Execute(context.Background(), EnqueueJobInput{Priority: -5})
 
 	require.NoError(t, err, "負の優先度でもエンキューできるべき")
+	require.True(t, output.Enqueued, "負の優先度でもエンキューされるべき")
 }
 
 // TestEnqueueJobInput はEnqueueJobInputの構造体が正しくフィールドを持つことをテストする
