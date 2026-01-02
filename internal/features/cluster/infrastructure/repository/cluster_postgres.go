@@ -52,6 +52,11 @@ func (r *clusterPostgresRepository) GetClusters(ctx context.Context, resolution 
 }
 
 // SaveClusters は複数のクラスター結果を保存する
+//
+// 1解像度分の全クラスター結果を1トランザクションで保存する。
+// 日本全国規模でもres3で数百件、res9でも数万件程度であり、
+// 現状の規模では1トランザクションで問題ない。
+// 将来的にデータ量が増加した場合はバッチ分割を検討すること。
 func (r *clusterPostgresRepository) SaveClusters(ctx context.Context, clusters []*entity.Cluster) error {
 	if len(clusters) == 0 {
 		return nil
