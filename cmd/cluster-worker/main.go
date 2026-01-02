@@ -9,18 +9,17 @@ import (
 	"context"
 	"log"
 	"log/slog"
-	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/config"
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/application/usecase"
 	clusterRepo "github.com/mktkhr/field-manager-api/internal/features/cluster/infrastructure/repository"
 	"github.com/mktkhr/field-manager-api/internal/infrastructure/cache"
+	"github.com/mktkhr/field-manager-api/internal/infrastructure/postgres"
 	"github.com/mktkhr/field-manager-api/internal/logger"
 	"github.com/mktkhr/field-manager-api/internal/utils"
 )
@@ -55,7 +54,7 @@ func main() {
 	}()
 
 	// DB接続
-	pool, err := connectDB(ctx, cfg.Database)
+	pool, err := postgres.CreateConnectionPool(ctx, &cfg.Database)
 	if err != nil {
 		log.Fatalf("DB接続に失敗しました: %v", err)
 	}
@@ -130,49 +129,6 @@ func main() {
 			}
 		}
 	}
-}
-
-// connectDB はデータベースに接続する
-func connectDB(ctx context.Context, cfg config.DatabaseConfig) (*pgxpool.Pool, error) {
-	connString := buildConnectionString(cfg)
-
-	poolConfig, err := pgxpool.ParseConfig(connString)
-	if err != nil {
-		return nil, err
-	}
-
-	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
-		return nil, err
-	}
-
-	slog.Info("DB接続に成功しました",
-		slog.String("host", cfg.Host),
-		slog.Int("port", cfg.Port),
-		slog.String("database", cfg.Name))
-
-	return pool, nil
-}
-
-// buildConnectionString は接続文字列を構築する
-func buildConnectionString(cfg config.DatabaseConfig) string {
-	// パスワードをURLエンコード
-	encodedPassword := url.UserPassword("", cfg.Password).String()
-	if len(encodedPassword) > 1 {
-		encodedPassword = encodedPassword[1:] // 先頭の:を除去
-	}
-
-	return "host=" + cfg.Host +
-		" port=" + strconv.Itoa(cfg.Port) +
-		" user=" + cfg.User +
-		" password=" + encodedPassword +
-		" dbname=" + cfg.Name +
-		" sslmode=" + cfg.SSLMode
 }
 
 // getEnvInt は環境変数から整数値を取得する
