@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createClusterJob = `-- name: CreateClusterJob :one
@@ -19,7 +20,7 @@ INSERT INTO cluster_jobs (
     created_at
 )
 VALUES ($1, 'pending', $2, NOW())
-RETURNING id, status, priority, created_at, started_at, completed_at, error_message
+RETURNING id, status, priority, created_at, started_at, completed_at, error_message, affected_h3_cells
 `
 
 type CreateClusterJobParams struct {
@@ -39,6 +40,42 @@ func (q *Queries) CreateClusterJob(ctx context.Context, arg *CreateClusterJobPar
 		&i.StartedAt,
 		&i.CompletedAt,
 		&i.ErrorMessage,
+		&i.AffectedH3Cells,
+	)
+	return &i, err
+}
+
+const createClusterJobWithAffectedCells = `-- name: CreateClusterJobWithAffectedCells :one
+INSERT INTO cluster_jobs (
+    id,
+    status,
+    priority,
+    affected_h3_cells,
+    created_at
+)
+VALUES ($1, 'pending', $2, $3, NOW())
+RETURNING id, status, priority, created_at, started_at, completed_at, error_message, affected_h3_cells
+`
+
+type CreateClusterJobWithAffectedCellsParams struct {
+	ID              uuid.UUID `json:"id"`
+	Priority        int32     `json:"priority"`
+	AffectedH3Cells []string  `json:"affected_h3_cells"`
+}
+
+// 影響セル情報付きでクラスタージョブを作成
+func (q *Queries) CreateClusterJobWithAffectedCells(ctx context.Context, arg *CreateClusterJobWithAffectedCellsParams) (*ClusterJob, error) {
+	row := q.db.QueryRow(ctx, createClusterJobWithAffectedCells, arg.ID, arg.Priority, arg.AffectedH3Cells)
+	var i ClusterJob
+	err := row.Scan(
+		&i.ID,
+		&i.Status,
+		&i.Priority,
+		&i.CreatedAt,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.ErrorMessage,
+		&i.AffectedH3Cells,
 	)
 	return &i, err
 }
@@ -78,10 +115,20 @@ FROM cluster_jobs
 WHERE id = $1
 `
 
+type GetClusterJobRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Status       string             `json:"status"`
+	Priority     int32              `json:"priority"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	StartedAt    pgtype.Timestamptz `json:"started_at"`
+	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
+	ErrorMessage *string            `json:"error_message"`
+}
+
 // クラスタージョブをIDで取得
-func (q *Queries) GetClusterJob(ctx context.Context, id uuid.UUID) (*ClusterJob, error) {
+func (q *Queries) GetClusterJob(ctx context.Context, id uuid.UUID) (*GetClusterJobRow, error) {
 	row := q.db.QueryRow(ctx, getClusterJob, id)
-	var i ClusterJob
+	var i GetClusterJobRow
 	err := row.Scan(
 		&i.ID,
 		&i.Status,
@@ -110,20 +157,88 @@ LIMIT $1
 FOR UPDATE SKIP LOCKED
 `
 
+type GetPendingClusterJobsRow struct {
+	ID           uuid.UUID          `json:"id"`
+	Status       string             `json:"status"`
+	Priority     int32              `json:"priority"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	StartedAt    pgtype.Timestamptz `json:"started_at"`
+	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
+	ErrorMessage *string            `json:"error_message"`
+}
+
 // 保留中のジョブを優先度順に取得(排他ロック)
-func (q *Queries) GetPendingClusterJobs(ctx context.Context, limit int32) ([]*ClusterJob, error) {
+func (q *Queries) GetPendingClusterJobs(ctx context.Context, limit int32) ([]*GetPendingClusterJobsRow, error) {
 	rows, err := q.db.Query(ctx, getPendingClusterJobs, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []*ClusterJob{}
+	items := []*GetPendingClusterJobsRow{}
 	for rows.Next() {
-		var i ClusterJob
+		var i GetPendingClusterJobsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Status,
 			&i.Priority,
+			&i.CreatedAt,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.ErrorMessage,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPendingClusterJobsWithAffectedCells = `-- name: GetPendingClusterJobsWithAffectedCells :many
+SELECT
+    id,
+    status,
+    priority,
+    affected_h3_cells,
+    created_at,
+    started_at,
+    completed_at,
+    error_message
+FROM cluster_jobs
+WHERE status = 'pending'
+ORDER BY priority DESC, created_at
+LIMIT $1
+FOR UPDATE SKIP LOCKED
+`
+
+type GetPendingClusterJobsWithAffectedCellsRow struct {
+	ID              uuid.UUID          `json:"id"`
+	Status          string             `json:"status"`
+	Priority        int32              `json:"priority"`
+	AffectedH3Cells []string           `json:"affected_h3_cells"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	StartedAt       pgtype.Timestamptz `json:"started_at"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	ErrorMessage    *string            `json:"error_message"`
+}
+
+// 保留中のジョブを影響セル情報付きで優先度順に取得(排他ロック)
+func (q *Queries) GetPendingClusterJobsWithAffectedCells(ctx context.Context, limit int32) ([]*GetPendingClusterJobsWithAffectedCellsRow, error) {
+	rows, err := q.db.Query(ctx, getPendingClusterJobsWithAffectedCells, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetPendingClusterJobsWithAffectedCellsRow{}
+	for rows.Next() {
+		var i GetPendingClusterJobsWithAffectedCellsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.Priority,
+			&i.AffectedH3Cells,
 			&i.CreatedAt,
 			&i.StartedAt,
 			&i.CompletedAt,

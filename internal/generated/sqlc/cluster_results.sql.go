@@ -46,6 +46,41 @@ func (q *Queries) AggregateClustersByRes3(ctx context.Context) ([]*AggregateClus
 	return items, nil
 }
 
+const aggregateClustersByRes3ForCells = `-- name: AggregateClustersByRes3ForCells :many
+SELECT
+    h3_index_res3 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res3 = ANY($1::TEXT[])
+GROUP BY h3_index_res3
+`
+
+type AggregateClustersByRes3ForCellsRow struct {
+	H3Index    *string `json:"h3_index"`
+	FieldCount int32   `json:"field_count"`
+}
+
+// 指定H3セル(res3)のみfieldsを集計(差分更新用)
+func (q *Queries) AggregateClustersByRes3ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes3ForCellsRow, error) {
+	rows, err := q.db.Query(ctx, aggregateClustersByRes3ForCells, h3Cells)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*AggregateClustersByRes3ForCellsRow{}
+	for rows.Next() {
+		var i AggregateClustersByRes3ForCellsRow
+		if err := rows.Scan(&i.H3Index, &i.FieldCount); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const aggregateClustersByRes5 = `-- name: AggregateClustersByRes5 :many
 SELECT
     h3_index_res5 AS h3_index,
@@ -70,6 +105,41 @@ func (q *Queries) AggregateClustersByRes5(ctx context.Context) ([]*AggregateClus
 	items := []*AggregateClustersByRes5Row{}
 	for rows.Next() {
 		var i AggregateClustersByRes5Row
+		if err := rows.Scan(&i.H3Index, &i.FieldCount); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const aggregateClustersByRes5ForCells = `-- name: AggregateClustersByRes5ForCells :many
+SELECT
+    h3_index_res5 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res5 = ANY($1::TEXT[])
+GROUP BY h3_index_res5
+`
+
+type AggregateClustersByRes5ForCellsRow struct {
+	H3Index    *string `json:"h3_index"`
+	FieldCount int32   `json:"field_count"`
+}
+
+// 指定H3セル(res5)のみfieldsを集計(差分更新用)
+func (q *Queries) AggregateClustersByRes5ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes5ForCellsRow, error) {
+	rows, err := q.db.Query(ctx, aggregateClustersByRes5ForCells, h3Cells)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*AggregateClustersByRes5ForCellsRow{}
+	for rows.Next() {
+		var i AggregateClustersByRes5ForCellsRow
 		if err := rows.Scan(&i.H3Index, &i.FieldCount); err != nil {
 			return nil, err
 		}
@@ -116,6 +186,41 @@ func (q *Queries) AggregateClustersByRes7(ctx context.Context) ([]*AggregateClus
 	return items, nil
 }
 
+const aggregateClustersByRes7ForCells = `-- name: AggregateClustersByRes7ForCells :many
+SELECT
+    h3_index_res7 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res7 = ANY($1::TEXT[])
+GROUP BY h3_index_res7
+`
+
+type AggregateClustersByRes7ForCellsRow struct {
+	H3Index    *string `json:"h3_index"`
+	FieldCount int32   `json:"field_count"`
+}
+
+// 指定H3セル(res7)のみfieldsを集計(差分更新用)
+func (q *Queries) AggregateClustersByRes7ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes7ForCellsRow, error) {
+	rows, err := q.db.Query(ctx, aggregateClustersByRes7ForCells, h3Cells)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*AggregateClustersByRes7ForCellsRow{}
+	for rows.Next() {
+		var i AggregateClustersByRes7ForCellsRow
+		if err := rows.Scan(&i.H3Index, &i.FieldCount); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const aggregateClustersByRes9 = `-- name: AggregateClustersByRes9 :many
 SELECT
     h3_index_res9 AS h3_index,
@@ -151,6 +256,41 @@ func (q *Queries) AggregateClustersByRes9(ctx context.Context) ([]*AggregateClus
 	return items, nil
 }
 
+const aggregateClustersByRes9ForCells = `-- name: AggregateClustersByRes9ForCells :many
+SELECT
+    h3_index_res9 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res9 = ANY($1::TEXT[])
+GROUP BY h3_index_res9
+`
+
+type AggregateClustersByRes9ForCellsRow struct {
+	H3Index    *string `json:"h3_index"`
+	FieldCount int32   `json:"field_count"`
+}
+
+// 指定H3セル(res9)のみfieldsを集計(差分更新用)
+func (q *Queries) AggregateClustersByRes9ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes9ForCellsRow, error) {
+	rows, err := q.db.Query(ctx, aggregateClustersByRes9ForCells, h3Cells)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*AggregateClustersByRes9ForCellsRow{}
+	for rows.Next() {
+		var i AggregateClustersByRes9ForCellsRow
+		if err := rows.Scan(&i.H3Index, &i.FieldCount); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const deleteAllClusterResults = `-- name: DeleteAllClusterResults :exec
 DELETE FROM cluster_results
 `
@@ -158,6 +298,22 @@ DELETE FROM cluster_results
 // 全クラスター結果を削除
 func (q *Queries) DeleteAllClusterResults(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, deleteAllClusterResults)
+	return err
+}
+
+const deleteClusterResultsByH3Indexes = `-- name: DeleteClusterResultsByH3Indexes :exec
+DELETE FROM cluster_results
+WHERE resolution = $1 AND h3_index = ANY($2::TEXT[])
+`
+
+type DeleteClusterResultsByH3IndexesParams struct {
+	Resolution int32    `json:"resolution"`
+	H3Indexes  []string `json:"h3_indexes"`
+}
+
+// 指定H3インデックスのクラスター結果を削除(カウント0になったセル用)
+func (q *Queries) DeleteClusterResultsByH3Indexes(ctx context.Context, arg *DeleteClusterResultsByH3IndexesParams) error {
+	_, err := q.db.Exec(ctx, deleteClusterResultsByH3Indexes, arg.Resolution, arg.H3Indexes)
 	return err
 }
 

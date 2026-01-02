@@ -143,6 +143,52 @@ func (q *Queries) GetField(ctx context.Context, id uuid.UUID) (*Field, error) {
 	return &i, err
 }
 
+const getH3IndexesByFieldIDs = `-- name: GetH3IndexesByFieldIDs :many
+SELECT
+    id,
+    h3_index_res3,
+    h3_index_res5,
+    h3_index_res7,
+    h3_index_res9
+FROM fields
+WHERE id = ANY($1::UUID[])
+`
+
+type GetH3IndexesByFieldIDsRow struct {
+	ID          uuid.UUID `json:"id"`
+	H3IndexRes3 *string   `json:"h3_index_res3"`
+	H3IndexRes5 *string   `json:"h3_index_res5"`
+	H3IndexRes7 *string   `json:"h3_index_res7"`
+	H3IndexRes9 *string   `json:"h3_index_res9"`
+}
+
+// 指定IDのフィールドのH3インデックスを取得(差分更新のプリフェッチ用)
+func (q *Queries) GetH3IndexesByFieldIDs(ctx context.Context, ids []uuid.UUID) ([]*GetH3IndexesByFieldIDsRow, error) {
+	rows, err := q.db.Query(ctx, getH3IndexesByFieldIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*GetH3IndexesByFieldIDsRow{}
+	for rows.Next() {
+		var i GetH3IndexesByFieldIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.H3IndexRes3,
+			&i.H3IndexRes5,
+			&i.H3IndexRes7,
+			&i.H3IndexRes9,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listFields = `-- name: ListFields :many
 SELECT
     id,

@@ -139,3 +139,14 @@ ON CONFLICT (id) DO UPDATE SET
     soil_type_id = EXCLUDED.soil_type_id,
     updated_at = NOW()
 RETURNING *;
+
+-- name: GetH3IndexesByFieldIDs :many
+-- 指定IDのフィールドのH3インデックスを取得(差分更新のプリフェッチ用)
+SELECT
+    id,
+    h3_index_res3,
+    h3_index_res5,
+    h3_index_res7,
+    h3_index_res9
+FROM fields
+WHERE id = ANY(@ids::UUID[]);

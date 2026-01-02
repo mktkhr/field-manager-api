@@ -79,3 +79,32 @@ WHERE status = 'completed' AND completed_at < NOW() - INTERVAL '7 days';
 -- 30日以上前に失敗したジョブを削除
 DELETE FROM cluster_jobs
 WHERE status = 'failed' AND completed_at < NOW() - INTERVAL '30 days';
+
+-- name: CreateClusterJobWithAffectedCells :one
+-- 影響セル情報付きでクラスタージョブを作成
+INSERT INTO cluster_jobs (
+    id,
+    status,
+    priority,
+    affected_h3_cells,
+    created_at
+)
+VALUES ($1, 'pending', $2, $3, NOW())
+RETURNING *;
+
+-- name: GetPendingClusterJobsWithAffectedCells :many
+-- 保留中のジョブを影響セル情報付きで優先度順に取得(排他ロック)
+SELECT
+    id,
+    status,
+    priority,
+    affected_h3_cells,
+    created_at,
+    started_at,
+    completed_at,
+    error_message
+FROM cluster_jobs
+WHERE status = 'pending'
+ORDER BY priority DESC, created_at
+LIMIT $1
+FOR UPDATE SKIP LOCKED;

@@ -26,6 +26,8 @@ type ClusterJob struct {
 	CompletedAt pgtype.Timestamptz `json:"completed_at"`
 	// エラーメッセージ(失敗時のみ)
 	ErrorMessage *string `json:"error_message"`
+	// 影響を受けたH3セルのリスト(NULLの場合は全範囲再計算)
+	AffectedH3Cells []string `json:"affected_h3_cells"`
 }
 
 // H3クラスタリング結果(全圃場対象)

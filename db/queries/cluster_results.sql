@@ -75,3 +75,44 @@ SELECT
 FROM fields
 WHERE h3_index_res9 IS NOT NULL
 GROUP BY h3_index_res9;
+
+-- name: AggregateClustersByRes3ForCells :many
+-- 指定H3セル(res3)のみfieldsを集計(差分更新用)
+SELECT
+    h3_index_res3 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res3 = ANY(@h3_cells::TEXT[])
+GROUP BY h3_index_res3;
+
+-- name: AggregateClustersByRes5ForCells :many
+-- 指定H3セル(res5)のみfieldsを集計(差分更新用)
+SELECT
+    h3_index_res5 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res5 = ANY(@h3_cells::TEXT[])
+GROUP BY h3_index_res5;
+
+-- name: AggregateClustersByRes7ForCells :many
+-- 指定H3セル(res7)のみfieldsを集計(差分更新用)
+SELECT
+    h3_index_res7 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res7 = ANY(@h3_cells::TEXT[])
+GROUP BY h3_index_res7;
+
+-- name: AggregateClustersByRes9ForCells :many
+-- 指定H3セル(res9)のみfieldsを集計(差分更新用)
+SELECT
+    h3_index_res9 AS h3_index,
+    COUNT(*)::INT AS field_count
+FROM fields
+WHERE h3_index_res9 = ANY(@h3_cells::TEXT[])
+GROUP BY h3_index_res9;
+
+-- name: DeleteClusterResultsByH3Indexes :exec
+-- 指定H3インデックスのクラスター結果を削除(カウント0になったセル用)
+DELETE FROM cluster_results
+WHERE resolution = $1 AND h3_index = ANY(@h3_indexes::TEXT[]);
