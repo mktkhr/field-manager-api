@@ -85,13 +85,14 @@ func (u *GetClustersUseCase) Execute(ctx context.Context, input GetClustersInput
 	// BoundingBox内のクラスターをフィルタリング
 	filteredClusters := u.filterClustersByBBox(clusters, bbox)
 
-	// staleフラグを確認（再計算中のジョブがあるか）
+	// staleフラグを確認(再計算中のジョブがあるか)
 	isStale, err := u.jobRepo.HasPendingOrProcessingJob(ctx)
 	if err != nil {
-		// エラーの場合はfalseとして扱う
+		// エラーの場合は安全側に倒してtrueとして扱う
+		// (クライアントに「再計算中かもしれない」と伝える)
 		u.logger.Warn("staleフラグの確認に失敗しました",
 			slog.String("error", err.Error()))
-		isStale = false
+		isStale = true
 	}
 
 	// レスポンス用に変換

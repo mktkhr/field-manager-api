@@ -453,7 +453,7 @@ func TestGetClustersUseCase_Execute_ZoomToResolution(t *testing.T) {
 	}
 }
 
-// TestGetClustersUseCase_Execute_HasPendingJobError はHasPendingOrProcessingJobエラー時もfalseとして扱うことをテストする
+// TestGetClustersUseCase_Execute_HasPendingJobError はHasPendingOrProcessingJobエラー時に安全側に倒してtrueを返すことをテストする
 func TestGetClustersUseCase_Execute_HasPendingJobError(t *testing.T) {
 	clusters := []*entity.Cluster{
 		{
@@ -486,7 +486,8 @@ func TestGetClustersUseCase_Execute_HasPendingJobError(t *testing.T) {
 
 	require.NoError(t, err, "HasPendingエラーでも処理は継続するべき")
 	require.NotNil(t, output, "出力がnilです")
-	require.False(t, output.IsStale, "エラー時はIsStaleはfalseであるべき")
+	// エラー時は安全側に倒してtrueを返す(クライアントに「再計算中かもしれない」と伝える)
+	require.True(t, output.IsStale, "エラー時はIsStaleはtrueであるべき(安全側)")
 }
 
 // TestGetClustersUseCase_Execute_CacheSetError はキャッシュ保存エラーでも処理が継続することをテストする
