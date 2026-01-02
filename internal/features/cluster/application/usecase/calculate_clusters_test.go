@@ -34,7 +34,8 @@ func TestCalculateClustersUseCase_Execute_Success(t *testing.T) {
 
 	uc := NewCalculateClustersUseCase(clusterRepo, cacheRepo, logger)
 
-	err := uc.Execute(context.Background())
+	// 全範囲再計算(空のAffectedH3Cells)
+	err := uc.Execute(context.Background(), CalculateClustersInput{})
 
 	require.NoError(t, err, "Executeでエラーが発生")
 }
@@ -47,7 +48,7 @@ func TestCalculateClustersUseCase_Execute_EmptyAggregation(t *testing.T) {
 
 	uc := NewCalculateClustersUseCase(clusterRepo, cacheRepo, logger)
 
-	err := uc.Execute(context.Background())
+	err := uc.Execute(context.Background(), CalculateClustersInput{})
 
 	require.NoError(t, err, "空の集計結果でもエラーにならないはず")
 }
@@ -60,7 +61,7 @@ func TestCalculateClustersUseCase_Execute_AggregateError(t *testing.T) {
 
 	uc := NewCalculateClustersUseCase(clusterRepo, cacheRepo, logger)
 
-	err := uc.Execute(context.Background())
+	err := uc.Execute(context.Background(), CalculateClustersInput{})
 
 	require.Error(t, err, "集計エラー時はエラーを返すべき")
 }
@@ -80,7 +81,7 @@ func TestCalculateClustersUseCase_Execute_SaveError(t *testing.T) {
 
 	uc := NewCalculateClustersUseCase(clusterRepo, cacheRepo, logger)
 
-	err := uc.Execute(context.Background())
+	err := uc.Execute(context.Background(), CalculateClustersInput{})
 
 	require.Error(t, err, "保存エラー時はエラーを返すべき")
 }
@@ -97,7 +98,7 @@ func TestCalculateClustersUseCase_Execute_CacheDeleteError(t *testing.T) {
 
 	uc := NewCalculateClustersUseCase(clusterRepo, cacheRepo, logger)
 
-	err := uc.Execute(context.Background())
+	err := uc.Execute(context.Background(), CalculateClustersInput{})
 
 	require.NoError(t, err, "キャッシュ削除エラーでも処理は完了するべき")
 }
@@ -115,7 +116,7 @@ func TestCalculateClustersUseCase_Execute_AllResolutions(t *testing.T) {
 
 	uc := NewCalculateClustersUseCase(clusterRepo, cacheRepo, logger)
 
-	err := uc.Execute(context.Background())
+	err := uc.Execute(context.Background(), CalculateClustersInput{})
 
 	require.NoError(t, err, "全解像度での計算が正常に完了するべき")
 }
@@ -133,7 +134,7 @@ func TestCalculateClustersUseCase_Execute_InvalidH3Index(t *testing.T) {
 
 	uc := NewCalculateClustersUseCase(clusterRepo, cacheRepo, logger)
 
-	err := uc.Execute(context.Background())
+	err := uc.Execute(context.Background(), CalculateClustersInput{})
 
 	require.NoError(t, err, "無効なH3インデックスはスキップされて正常に完了するべき")
 }

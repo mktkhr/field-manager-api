@@ -45,11 +45,16 @@ func (m *mockStorageClient) Exists(ctx context.Context, key string) (bool, error
 
 // mockFieldRepository はFieldRepositoryのモック実装
 type mockFieldRepository struct {
-	err error
+	err        error
+	h3Prefetch []dto.FieldH3Prefetch
 }
 
 func (m *mockFieldRepository) UpsertBatch(ctx context.Context, inputs []dto.FieldBatchInput) error {
 	return m.err
+}
+
+func (m *mockFieldRepository) GetH3IndexesByFieldIDs(ctx context.Context, fieldIDs []string) ([]dto.FieldH3Prefetch, error) {
+	return m.h3Prefetch, nil
 }
 
 // testImportJobRepository はテスト用のImportJobRepositoryモック

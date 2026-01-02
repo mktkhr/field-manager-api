@@ -50,6 +50,17 @@ func (m *mockClusterRepository) AggregateByH3(_ context.Context, _ entity.Resolu
 	return m.aggregated, nil
 }
 
+func (m *mockClusterRepository) AggregateByH3ForCells(_ context.Context, _ entity.Resolution, _ []string) ([]*repository.AggregatedCluster, error) {
+	if m.aggregateErr != nil {
+		return nil, m.aggregateErr
+	}
+	return m.aggregated, nil
+}
+
+func (m *mockClusterRepository) DeleteClustersByH3Indexes(_ context.Context, _ entity.Resolution, _ []string) error {
+	return m.deleteErr
+}
+
 // mockClusterCacheRepository はClusterCacheRepositoryのモック実装
 type mockClusterCacheRepository struct {
 	clusters  []*entity.Cluster
@@ -91,6 +102,10 @@ func (m *mockClusterJobRepository) Create(_ context.Context, _ *entity.ClusterJo
 	return m.createErr
 }
 
+func (m *mockClusterJobRepository) CreateWithAffectedCells(_ context.Context, _ *entity.ClusterJob) error {
+	return m.createErr
+}
+
 func (m *mockClusterJobRepository) FindByID(_ context.Context, _ uuid.UUID) (*entity.ClusterJob, error) {
 	if m.findByIDErr != nil {
 		return nil, m.findByIDErr
@@ -102,6 +117,13 @@ func (m *mockClusterJobRepository) FindByID(_ context.Context, _ uuid.UUID) (*en
 }
 
 func (m *mockClusterJobRepository) FindPendingJobs(_ context.Context, _ int32) ([]*entity.ClusterJob, error) {
+	if m.findPendingErr != nil {
+		return nil, m.findPendingErr
+	}
+	return m.jobs, nil
+}
+
+func (m *mockClusterJobRepository) FindPendingJobsWithAffectedCells(_ context.Context, _ int32) ([]*entity.ClusterJob, error) {
 	if m.findPendingErr != nil {
 		return nil, m.findPendingErr
 	}
