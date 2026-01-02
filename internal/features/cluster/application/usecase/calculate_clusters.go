@@ -103,6 +103,9 @@ func (u *CalculateClustersUseCase) classifyH3CellsByResolution(cells []string) m
 		resolution := u.detectResolution(cell)
 		if resolution >= 0 {
 			result[resolution] = append(result[resolution], cell)
+		} else {
+			u.logger.Warn("無効または未対応のH3インデックスがスキップされました",
+				slog.String("h3_index", cell))
 		}
 	}
 	return result
