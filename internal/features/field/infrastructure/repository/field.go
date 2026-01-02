@@ -21,14 +21,16 @@ import (
 type fieldRepository struct {
 	db      *pgxpool.Pool
 	queries *sqlc.Queries
+	logger  *slog.Logger
 }
 
 // NewFieldRepository は新しいFieldRepositoryを作成する
 // 戻り値は具象型を返し、呼び出し元で必要なインターフェースにキャストして使用する
-func NewFieldRepository(db *pgxpool.Pool) *fieldRepository {
+func NewFieldRepository(db *pgxpool.Pool, logger *slog.Logger) *fieldRepository {
 	return &fieldRepository{
 		db:      db,
 		queries: sqlc.New(db),
+		logger:  logger,
 	}
 }
 
@@ -72,7 +74,8 @@ func (r *fieldRepository) UpsertBatch(ctx context.Context, inputs []importdto.Fi
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			slog.Error("トランザクションのロールバックに失敗。データ不整合の可能性があります", "error", err)
+			r.logger.Error("トランザクションのロールバックに失敗。データ不整合の可能性があります",
+				slog.String("error", err.Error()))
 		}
 	}()
 

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -60,7 +61,7 @@ func cleanupTestData(t *testing.T, ctx context.Context) {
 }
 
 func TestNewFieldRepository_Integration(t *testing.T) {
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	if repo == nil {
 		t.Error("NewFieldRepository() returned nil")
@@ -69,7 +70,7 @@ func TestNewFieldRepository_Integration(t *testing.T) {
 
 func TestFieldRepository_Create_Integration(t *testing.T) {
 	ctx := context.Background()
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	field := entity.NewField(uuid.New(), "163210")
 
@@ -82,7 +83,7 @@ func TestFieldRepository_Create_Integration(t *testing.T) {
 
 func TestFieldRepository_Update_Integration(t *testing.T) {
 	ctx := context.Background()
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	field := entity.NewField(uuid.New(), "163210")
 
@@ -95,7 +96,7 @@ func TestFieldRepository_Update_Integration(t *testing.T) {
 
 func TestFieldRepository_Upsert_Integration(t *testing.T) {
 	ctx := context.Background()
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	field := entity.NewField(uuid.New(), "163210")
 
@@ -110,7 +111,7 @@ func TestFieldRepository_Delete_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	// 存在しないIDでの削除（エラーにはならない）
 	err := repo.Delete(ctx, uuid.New())
@@ -123,7 +124,7 @@ func TestFieldRepository_FindByID_NotFound_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	// 存在しないIDで検索
 	_, err := repo.FindByID(ctx, uuid.New())
@@ -137,7 +138,7 @@ func TestFieldRepository_UpsertBatch_EmptyFeatures_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	// 空の入力リストでUpsertBatch
 	err := repo.UpsertBatch(ctx, []importdto.FieldBatchInput{})
@@ -151,7 +152,7 @@ func TestFieldRepository_UpsertBatch_SingleFeature_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID := uuid.New()
 	input := importdto.FieldBatchInput{
@@ -191,7 +192,7 @@ func TestFieldRepository_UpsertBatch_WithSoilType_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID := uuid.New()
 	input := importdto.FieldBatchInput{
@@ -236,7 +237,7 @@ func TestFieldRepository_UpsertBatch_WithPinInfo_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID := uuid.New()
 	descriptiveStudyDataRaw := "2024-01-15"
@@ -288,7 +289,7 @@ func TestFieldRepository_UpsertBatch_InvalidFieldID_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	input := importdto.FieldBatchInput{
 		ID:       "invalid-uuid",
@@ -318,7 +319,7 @@ func TestFieldRepository_UpsertBatch_InvalidGeometry_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID := uuid.New()
 	input := importdto.FieldBatchInput{
@@ -347,7 +348,7 @@ func TestFieldRepository_UpsertBatch_MultipleFeatures_Integration(t *testing.T) 
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID1 := uuid.New()
 	fieldID2 := uuid.New()
@@ -415,7 +416,7 @@ func TestFieldRepository_UpsertBatch_UpdateExisting_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID := uuid.New()
 	input := importdto.FieldBatchInput{
@@ -460,7 +461,7 @@ func TestFieldRepository_FindByID_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	_, err := repo.FindByID(ctx, uuid.New())
 	if err == nil {
@@ -472,7 +473,7 @@ func TestFieldRepository_Delete_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	err := repo.Delete(ctx, uuid.New())
 	if err == nil {
@@ -485,7 +486,7 @@ func TestFieldRepository_UpsertBatch_TransactionError_Integration(t *testing.T) 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	input := importdto.FieldBatchInput{
 		ID:       uuid.New().String(),
@@ -507,7 +508,7 @@ func TestFieldRepository_UpsertBatch_EmptyGeometry_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID := uuid.New()
 	input := importdto.FieldBatchInput{
@@ -530,7 +531,7 @@ func TestFieldRepository_UpsertBatch_TwoPointsGeometry_Integration(t *testing.T)
 	ctx := context.Background()
 	cleanupTestData(t, ctx)
 
-	repo := NewFieldRepository(testDB)
+	repo := NewFieldRepository(testDB, slog.Default())
 
 	fieldID := uuid.New()
 	// 2点だけのポリゴン - geom.SetCoordsでエラーになるはず
