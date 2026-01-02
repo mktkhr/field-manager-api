@@ -18,13 +18,15 @@ import (
 type clusterPostgresRepository struct {
 	pool    *pgxpool.Pool
 	queries *sqlc.Queries
+	logger  *slog.Logger
 }
 
 // NewClusterPostgresRepository はClusterRepositoryのPostgreSQL実装を作成する
-func NewClusterPostgresRepository(pool *pgxpool.Pool) repository.ClusterRepository {
+func NewClusterPostgresRepository(pool *pgxpool.Pool, logger *slog.Logger) repository.ClusterRepository {
 	return &clusterPostgresRepository{
 		pool:    pool,
 		queries: sqlc.New(pool),
+		logger:  logger,
 	}
 }
 
@@ -68,7 +70,7 @@ func (r *clusterPostgresRepository) SaveClusters(ctx context.Context, clusters [
 	}
 	defer func() {
 		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
-			slog.Error("トランザクションのロールバックに失敗。データ不整合の可能性があります",
+			r.logger.Error("トランザクションのロールバックに失敗。データ不整合の可能性があります",
 				slog.String("error", err.Error()))
 		}
 	}()

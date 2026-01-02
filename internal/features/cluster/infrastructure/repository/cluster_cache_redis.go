@@ -34,12 +34,14 @@ type clusterCacheData struct {
 // clusterCacheRedisRepository はClusterCacheRepositoryのRedis実装
 type clusterCacheRedisRepository struct {
 	client *cache.Client
+	logger *slog.Logger
 }
 
 // NewClusterCacheRedisRepository はClusterCacheRepositoryのRedis実装を作成する
-func NewClusterCacheRedisRepository(client *cache.Client) repository.ClusterCacheRepository {
+func NewClusterCacheRedisRepository(client *cache.Client, logger *slog.Logger) repository.ClusterCacheRepository {
 	return &clusterCacheRedisRepository{
 		client: client,
+		logger: logger,
 	}
 }
 
@@ -122,7 +124,7 @@ func (r *clusterCacheRedisRepository) DeleteClusters(ctx context.Context) error 
 	for _, resolution := range entity.AllResolutions {
 		key := buildCacheKey(resolution)
 		if err := r.client.Delete(ctx, key); err != nil {
-			slog.Warn("キャッシュの削除に失敗しました",
+			r.logger.Warn("キャッシュの削除に失敗しました",
 				slog.String("key", key),
 				slog.String("error", err.Error()))
 			lastErr = err
