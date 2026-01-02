@@ -1,29 +1,39 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.25.5-alpine AS builder
+# Build stage
+FROM golang:1.25-alpine AS builder
+
+RUN apk add --no-cache git gcc musl-dev
 
 WORKDIR /app
 
-# 依存関係のインストール
+# 依存関係のキャッシュ
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 
-# ビルド
+# ソースコードをコピー
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+
+# ビルド(h3-goがCGOを必要とするため有効化)
+RUN CGO_ENABLED=1 GOOS=linux go build \
     -ldflags="-w -s" \
     -o /server \
     ./cmd/server/main.go
 
-FROM gcr.io/distroless/static:nonroot
+# Runtime stage
+FROM alpine:3.20
 
-# ビルド成果物をコピー
-COPY --from=builder /server /server
+RUN apk add --no-cache ca-certificates tzdata
+
+WORKDIR /app
+
+COPY --from=builder /server /app/server
 
 # ポート公開
 EXPOSE 8080
 
 # 非rootユーザーで実行
-USER nonroot:nonroot
+RUN adduser -D -g '' appuser
+USER appuser
 
-ENTRYPOINT ["/server"]
+ENTRYPOINT ["/app/server"]

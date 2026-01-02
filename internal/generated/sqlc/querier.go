@@ -11,6 +11,22 @@ import (
 )
 
 type Querier interface {
+	// H3解像度3でfieldsを集計
+	AggregateClustersByRes3(ctx context.Context) ([]*AggregateClustersByRes3Row, error)
+	// 指定H3セル(res3)のみfieldsを集計(差分更新用)
+	AggregateClustersByRes3ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes3ForCellsRow, error)
+	// H3解像度5でfieldsを集計
+	AggregateClustersByRes5(ctx context.Context) ([]*AggregateClustersByRes5Row, error)
+	// 指定H3セル(res5)のみfieldsを集計(差分更新用)
+	AggregateClustersByRes5ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes5ForCellsRow, error)
+	// H3解像度7でfieldsを集計
+	AggregateClustersByRes7(ctx context.Context) ([]*AggregateClustersByRes7Row, error)
+	// 指定H3セル(res7)のみfieldsを集計(差分更新用)
+	AggregateClustersByRes7ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes7ForCellsRow, error)
+	// H3解像度9でfieldsを集計
+	AggregateClustersByRes9(ctx context.Context) ([]*AggregateClustersByRes9Row, error)
+	// 指定H3セル(res9)のみfieldsを集計(差分更新用)
+	AggregateClustersByRes9ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes9ForCellsRow, error)
 	// 圃場IDで農地台帳の件数を取得
 	CountFieldLandRegistriesByFieldID(ctx context.Context, fieldID uuid.UUID) (int64, error)
 	// 圃場の総数を取得
@@ -19,32 +35,58 @@ type Querier interface {
 	CountImportJobs(ctx context.Context) (int64, error)
 	// ステータス別のインポートジョブ数を取得
 	CountImportJobsByStatus(ctx context.Context, status string) (int64, error)
+	// クラスタージョブを作成
+	CreateClusterJob(ctx context.Context, arg *CreateClusterJobParams) (*ClusterJob, error)
+	// 影響セル情報付きでクラスタージョブを作成
+	CreateClusterJobWithAffectedCells(ctx context.Context, arg *CreateClusterJobWithAffectedCellsParams) (*ClusterJob, error)
 	// 圃場を作成
 	CreateField(ctx context.Context, arg *CreateFieldParams) (*Field, error)
 	// 農地台帳を作成
 	CreateFieldLandRegistry(ctx context.Context, arg *CreateFieldLandRegistryParams) (*FieldLandRegistry, error)
 	// インポートジョブを作成
 	CreateImportJob(ctx context.Context, cityCode string) (*ImportJob, error)
+	// 全クラスター結果を削除
+	DeleteAllClusterResults(ctx context.Context) error
+	// 指定H3インデックスのクラスター結果を削除(カウント0になったセル用)
+	DeleteClusterResultsByH3Indexes(ctx context.Context, arg *DeleteClusterResultsByH3IndexesParams) error
+	// 指定解像度のクラスター結果を全削除
+	DeleteClusterResultsByResolution(ctx context.Context, resolution int32) error
 	// 圃場を削除
 	DeleteField(ctx context.Context, id uuid.UUID) error
 	// 圃場IDで農地台帳を削除(REPLACE方式用)
 	DeleteFieldLandRegistriesByFieldID(ctx context.Context, fieldID uuid.UUID) error
 	// 複数の圃場IDで農地台帳を一括削除(バッチREPLACE方式用)
 	DeleteFieldLandRegistriesByFieldIDs(ctx context.Context, dollar_1 []uuid.UUID) error
+	// 7日以上前に完了したジョブを削除
+	DeleteOldCompletedJobs(ctx context.Context) error
+	// 30日以上前に失敗したジョブを削除
+	DeleteOldFailedJobs(ctx context.Context) error
+	// クラスタージョブをIDで取得
+	GetClusterJob(ctx context.Context, id uuid.UUID) (*GetClusterJobRow, error)
+	// 指定解像度のクラスター結果を取得
+	GetClusterResults(ctx context.Context, resolution int32) ([]*ClusterResult, error)
 	// 圃場をIDで取得
 	GetField(ctx context.Context, id uuid.UUID) (*Field, error)
 	// 農地台帳をIDで取得
 	GetFieldLandRegistry(ctx context.Context, id uuid.UUID) (*FieldLandRegistry, error)
+	// 指定IDのフィールドのH3インデックスを取得(差分更新のプリフェッチ用)
+	GetH3IndexesByFieldIDs(ctx context.Context, ids []uuid.UUID) ([]*GetH3IndexesByFieldIDsRow, error)
 	// 遊休農地状況をコードで取得
 	GetIdleLandStatus(ctx context.Context, code string) (*IdleLandStatus, error)
 	// インポートジョブをIDで取得
 	GetImportJob(ctx context.Context, id uuid.UUID) (*ImportJob, error)
 	// 土地種別をコードで取得
 	GetLandCategory(ctx context.Context, code string) (*LandCategory, error)
+	// 保留中のジョブを優先度順に取得(排他ロック)
+	GetPendingClusterJobs(ctx context.Context, limit int32) ([]*GetPendingClusterJobsRow, error)
+	// 保留中のジョブを影響セル情報付きで優先度順に取得(排他ロック)
+	GetPendingClusterJobsWithAffectedCells(ctx context.Context, limit int32) ([]*GetPendingClusterJobsWithAffectedCellsRow, error)
 	// 土壌タイプをIDで取得
 	GetSoilType(ctx context.Context, id uuid.UUID) (*SoilType, error)
 	// 土壌タイプを小分類コードで取得
 	GetSoilTypeBySmallCode(ctx context.Context, smallCode string) (*SoilType, error)
+	// 保留中または処理中のジョブがあるか確認
+	HasPendingOrProcessingJob(ctx context.Context) (bool, error)
 	// 圃場IDで農地台帳一覧を取得
 	ListFieldLandRegistriesByFieldID(ctx context.Context, fieldID uuid.UUID) ([]*FieldLandRegistry, error)
 	// 圃場一覧を取得
@@ -61,6 +103,12 @@ type Querier interface {
 	ListLandCategories(ctx context.Context) ([]*LandCategory, error)
 	// 土壌タイプ一覧を取得
 	ListSoilTypes(ctx context.Context) ([]*SoilType, error)
+	// ジョブを完了に更新
+	UpdateClusterJobToCompleted(ctx context.Context, id uuid.UUID) error
+	// ジョブを失敗に更新
+	UpdateClusterJobToFailed(ctx context.Context, arg *UpdateClusterJobToFailedParams) error
+	// ジョブを処理中に更新
+	UpdateClusterJobToProcessing(ctx context.Context, id uuid.UUID) error
 	// 圃場を更新
 	UpdateField(ctx context.Context, arg *UpdateFieldParams) (*Field, error)
 	// インポートジョブのエラー情報を更新
@@ -75,6 +123,8 @@ type Querier interface {
 	UpdateImportJobStatus(ctx context.Context, arg *UpdateImportJobStatusParams) (*ImportJob, error)
 	// インポートジョブの総レコード数を更新
 	UpdateImportJobTotalRecords(ctx context.Context, arg *UpdateImportJobTotalRecordsParams) (*ImportJob, error)
+	// クラスター結果をUPSERT
+	UpsertClusterResult(ctx context.Context, arg *UpsertClusterResultParams) error
 	// 圃場をUPSERT(wagriインポート用)
 	// geometry, centroidはWKB形式のbytea型で受け取り、ST_GeomFromWKBで変換
 	UpsertField(ctx context.Context, arg *UpsertFieldParams) (*Field, error)

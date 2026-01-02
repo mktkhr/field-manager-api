@@ -54,4 +54,6 @@ debug
 *.out
 cmd/wagri-fetcher/bootstrap
 cmd/wagri-fetcher/wagri-fetcher.zip
-import-processor
+# ビルドされたバイナリ(ルートレベルのみ)
+/import-processor
+/cluster-worker

@@ -11,6 +11,42 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// クラスタリングジョブ管理
+type ClusterJob struct {
+	ID uuid.UUID `json:"id"`
+	// ジョブステータス(pending, processing, completed, failed)
+	Status string `json:"status"`
+	// 優先度(高いほど先に処理)
+	Priority int32 `json:"priority"`
+	// ジョブ作成日時
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// ジョブ開始日時
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+	// ジョブ完了日時
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+	// エラーメッセージ(失敗時のみ)
+	ErrorMessage *string `json:"error_message"`
+	// 影響を受けたH3セルのリスト(NULLの場合は全範囲再計算)
+	AffectedH3Cells []string `json:"affected_h3_cells"`
+}
+
+// H3クラスタリング結果(全圃場対象)
+type ClusterResult struct {
+	ID uuid.UUID `json:"id"`
+	// H3解像度(3, 5, 7, 9)
+	Resolution int32 `json:"resolution"`
+	// H3インデックス(16進数文字列)
+	H3Index string `json:"h3_index"`
+	// クラスターに含まれる圃場数
+	FieldCount int32 `json:"field_count"`
+	// クラスター中心の緯度
+	CenterLat float64 `json:"center_lat"`
+	// クラスター中心の経度
+	CenterLng float64 `json:"center_lng"`
+	// 計算日時
+	CalculatedAt pgtype.Timestamptz `json:"calculated_at"`
+}
+
 // 圃場マスタテーブル
 type Field struct {
 	// 主キー

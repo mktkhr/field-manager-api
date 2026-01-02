@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"github.com/caarlos0/env/v10"
+)
 
 // CacheConfig はRedis/Valkey接続設定を保持する
 type CacheConfig struct {
@@ -15,4 +19,13 @@ type CacheConfig struct {
 	PoolSize       int           `env:"CACHE_POOL_SIZE" envDefault:"10"`
 	MinIdleConns   int           `env:"CACHE_MIN_IDLE_CONNS" envDefault:"5"`
 	TLSEnabled     bool          `env:"CACHE_TLS_ENABLED" envDefault:"false"`
+}
+
+// LoadCacheConfig はCache設定を読み込む
+func LoadCacheConfig() (*CacheConfig, error) {
+	cfg := &CacheConfig{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }

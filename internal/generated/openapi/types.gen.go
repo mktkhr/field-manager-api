@@ -18,6 +18,29 @@ const (
 	Processing         ImportStatusStatus = "processing"
 )
 
+// Cluster defines model for Cluster.
+type Cluster struct {
+	// Count クラスターに含まれる圃場数
+	Count int `json:"count"`
+
+	// H3Index H3インデックス(16進数文字列)
+	H3Index string `json:"h3Index"`
+
+	// Lat クラスター中心の緯度
+	Lat float64 `json:"lat"`
+
+	// Lng クラスター中心の経度
+	Lng float64 `json:"lng"`
+}
+
+// ClusterListResponse defines model for ClusterListResponse.
+type ClusterListResponse struct {
+	Clusters []Cluster `json:"clusters"`
+
+	// IsStale クラスターが再計算中かどうか
+	IsStale bool `json:"isStale"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Code    string `json:"code"`
@@ -80,6 +103,33 @@ type ImportStatus struct {
 
 // ImportStatusStatus defines model for ImportStatus.Status.
 type ImportStatusStatus string
+
+// RecalculateResponse defines model for RecalculateResponse.
+type RecalculateResponse struct {
+	// Enqueued ジョブがエンキューされたかどうか
+	Enqueued bool `json:"enqueued"`
+
+	// Message 処理結果メッセージ
+	Message string `json:"message"`
+}
+
+// GetClustersParams defines parameters for GetClusters.
+type GetClustersParams struct {
+	// Zoom Google Mapsのズームレベル(1.0-22.0、少数対応)
+	Zoom float64 `form:"zoom" json:"zoom"`
+
+	// SwLat 南西端の緯度
+	SwLat float64 `form:"sw_lat" json:"sw_lat"`
+
+	// SwLng 南西端の経度
+	SwLng float64 `form:"sw_lng" json:"sw_lng"`
+
+	// NeLat 北東端の緯度
+	NeLat float64 `form:"ne_lat" json:"ne_lat"`
+
+	// NeLng 北東端の経度
+	NeLng float64 `form:"ne_lng" json:"ne_lng"`
+}
 
 // ListFieldsParams defines parameters for ListFields.
 type ListFieldsParams struct {

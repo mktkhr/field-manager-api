@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"log/slog"
-	"net/http"
 
 	"github.com/mktkhr/field-manager-api/internal/config"
+	"github.com/mktkhr/field-manager-api/internal/infrastructure/cache"
+	"github.com/mktkhr/field-manager-api/internal/infrastructure/postgres"
 	"github.com/mktkhr/field-manager-api/internal/logger"
+	"github.com/mktkhr/field-manager-api/internal/server"
 )
 
 func main() {
@@ -27,15 +30,33 @@ func main() {
 		"storage", cfg.Storage.Endpoint,
 	)
 
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write([]byte(`{"status":"ok"}`)); err != nil {
-			slog.Error("レスポンス書き込みエラー", "error", err)
+	ctx := context.Background()
+
+	// データベース接続
+	pool, err := postgres.CreateConnectionPool(ctx, &cfg.Database)
+	if err != nil {
+		log.Fatalf("データベース接続に失敗しました: %v", err)
+	}
+	defer pool.Close()
+
+	// Redisクライアント作成
+	redisClient := cache.NewRedisClient(cfg.Cache)
+	cacheClient := cache.NewClient(redisClient)
+	defer func() {
+		if closeErr := redisClient.Close(); closeErr != nil {
+			slog.Error("Redisクライアントのクローズに失敗", "error", closeErr)
 		}
-	})
+	}()
+
+	// ハンドラー作成
+	appLogger := slog.Default()
+	handler := server.NewStrictServerHandler(pool, cacheClient, appLogger)
+
+	// ルーターセットアップ
+	router := server.SetupRouter(handler)
 
 	slog.Info("サーバーがポート :8080 で起動しました")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := router.Run(":8080"); err != nil {
 		slog.Error("サーバー起動エラー", "error", err)
 	}
 }

@@ -5,6 +5,7 @@ package repository
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -64,7 +65,7 @@ func TestImportJobRepository_Create_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	job := &entity.ImportJob{
 		CityCode: "163210",
@@ -95,7 +96,7 @@ func TestImportJobRepository_FindByID_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -126,7 +127,7 @@ func TestImportJobRepository_FindByID_NotFound_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// 存在しないIDで検索
 	_, err := repo.FindByID(ctx, uuid.New())
@@ -139,7 +140,7 @@ func TestImportJobRepository_UpdateStatus_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -175,7 +176,7 @@ func TestImportJobRepository_UpdateStatus_ToCompleted_Integration(t *testing.T) 
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成して処理中にする
 	job := &entity.ImportJob{
@@ -214,7 +215,7 @@ func TestImportJobRepository_UpdateProgress_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -251,7 +252,7 @@ func TestImportJobRepository_UpdateS3Key_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -285,7 +286,7 @@ func TestImportJobRepository_UpdateExecutionArn_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -319,7 +320,7 @@ func TestImportJobRepository_UpdateTotalRecords_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -353,7 +354,7 @@ func TestImportJobRepository_UpdateError_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -410,7 +411,7 @@ func TestImportJobRepository_UpdateError_EmptyFailedIDs_Integration(t *testing.T
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// ジョブを作成
 	job := &entity.ImportJob{
@@ -450,7 +451,7 @@ func TestImportJobRepository_FullWorkflow_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// 1. ジョブを作成
 	job := &entity.ImportJob{
@@ -529,7 +530,7 @@ func TestImportJobRepository_MultipleJobs_Integration(t *testing.T) {
 	ctx := context.Background()
 	cleanupImportJobs(t, ctx)
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	// 複数のジョブを作成
 	cityCodes := []string{"163210", "131016", "271004"}
@@ -558,7 +559,7 @@ func TestImportJobRepository_MultipleJobs_Integration(t *testing.T) {
 }
 
 func TestNewImportJobRepository_Integration(t *testing.T) {
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 	if repo == nil {
 		t.Error("NewImportJobRepository() returned nil")
 	}
@@ -569,7 +570,7 @@ func TestImportJobRepository_Create_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // 即座にキャンセル
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	job := &entity.ImportJob{
 		CityCode: "163210",
@@ -586,7 +587,7 @@ func TestImportJobRepository_FindByID_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	_, err := repo.FindByID(ctx, uuid.New())
 	if err == nil {
@@ -598,7 +599,7 @@ func TestImportJobRepository_UpdateStatus_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	err := repo.UpdateStatus(ctx, uuid.New(), entity.ImportStatusProcessing)
 	if err == nil {
@@ -610,7 +611,7 @@ func TestImportJobRepository_UpdateProgress_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	err := repo.UpdateProgress(ctx, uuid.New(), 100, 10, 1)
 	if err == nil {
@@ -622,7 +623,7 @@ func TestImportJobRepository_UpdateS3Key_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	err := repo.UpdateS3Key(ctx, uuid.New(), "test-key")
 	if err == nil {
@@ -634,7 +635,7 @@ func TestImportJobRepository_UpdateExecutionArn_Error_Integration(t *testing.T) 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	err := repo.UpdateExecutionArn(ctx, uuid.New(), "test-arn")
 	if err == nil {
@@ -646,7 +647,7 @@ func TestImportJobRepository_UpdateTotalRecords_Error_Integration(t *testing.T) 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	err := repo.UpdateTotalRecords(ctx, uuid.New(), 1000)
 	if err == nil {
@@ -658,7 +659,7 @@ func TestImportJobRepository_UpdateError_Error_Integration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	repo := NewImportJobRepository(testDB)
+	repo := NewImportJobRepository(testDB, slog.Default())
 
 	err := repo.UpdateError(ctx, uuid.New(), "error", []string{"id1"})
 	if err == nil {

@@ -305,4 +305,49 @@ import-processor-run: ## import-processorをローカル実行 (S3_KEY=xxx IMPOR
 		--s3-key $(S3_KEY) \
 		--import-job-id $(IMPORT_JOB_ID)
 
-.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean arch-check gosec-install gosec-scan sqlc-install sqlc-generate generate migrate-install migrate-create migrate-up migrate-up-one migrate-down migrate-down-all migrate-force migrate-version migrate-status localstack-up localstack-logs localstack-status localstack-build-lambda localstack-deploy-lambda localstack-invoke-lambda localstack-start-workflow localstack-list-executions import-processor-build import-processor-run
+# =============================================================================
+# Cluster Worker (EKS Job / Daemon)
+# =============================================================================
+cluster-worker-build: ## cluster-worker Dockerイメージをビルド
+	@echo "cluster-worker Dockerイメージをビルドしています..."
+	@docker build -f docker/cluster-worker/Dockerfile -t cluster-worker:local .
+	@echo "ビルド完了: cluster-worker:local"
+
+cluster-worker-run: ## cluster-workerを1回実行モードでローカル実行
+	@echo "cluster-workerを1回実行モードでローカル実行しています..."
+	@docker run --rm \
+		--network field_manager_network \
+		-e DB_HOST=postgres \
+		-e DB_PORT=5432 \
+		-e DB_USER=$(DB_USER) \
+		-e DB_PASSWORD=$(DB_PASSWORD) \
+		-e DB_NAME=$(DB_NAME) \
+		-e DB_SSL_MODE=disable \
+		-e CACHE_HOST=valkey \
+		-e CACHE_PORT=6379 \
+		-e CACHE_PASSWORD= \
+		-e CACHE_DB=0 \
+		-e RUN_ONCE=true \
+		-e BATCH_SIZE=10 \
+		cluster-worker:local
+
+cluster-worker-daemon: ## cluster-workerをデーモンモードでローカル実行
+	@echo "cluster-workerをデーモンモードでローカル実行しています..."
+	@docker run --rm \
+		--network field_manager_network \
+		-e DB_HOST=postgres \
+		-e DB_PORT=5432 \
+		-e DB_USER=$(DB_USER) \
+		-e DB_PASSWORD=$(DB_PASSWORD) \
+		-e DB_NAME=$(DB_NAME) \
+		-e DB_SSL_MODE=disable \
+		-e CACHE_HOST=valkey \
+		-e CACHE_PORT=6379 \
+		-e CACHE_PASSWORD= \
+		-e CACHE_DB=0 \
+		-e RUN_ONCE=false \
+		-e POLL_INTERVAL=30s \
+		-e BATCH_SIZE=10 \
+		cluster-worker:local
+
+.PHONY: build run clean lint test test-unit test-integration deps api-install api-validate api-bundle api-generate api-clean arch-check gosec-install gosec-scan sqlc-install sqlc-generate generate migrate-install migrate-create migrate-up migrate-up-one migrate-down migrate-down-all migrate-force migrate-version migrate-status localstack-up localstack-logs localstack-status localstack-build-lambda localstack-deploy-lambda localstack-invoke-lambda localstack-start-workflow localstack-list-executions import-processor-build import-processor-run cluster-worker-build cluster-worker-run cluster-worker-daemon

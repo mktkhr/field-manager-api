@@ -18,6 +18,8 @@ tags:
     description: 圃場管理
   - name: imports
     description: wagriデータインポート
+  - name: clusters
+    description: H3クラスタリング
 
 # セキュリティ定義(認証なしを明示)
 security: []
@@ -192,6 +194,112 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /api/v1/clusters:
+    get:
+      tags:
+        - clusters
+      summary: クラスター一覧取得
+      description: |
+        指定されたズームレベルとバウンディングボックス内のH3クラスターを取得する。
+        ズームレベルに応じて最適なH3解像度を自動選択する。
+      operationId: getClusters
+      security: []
+      parameters:
+        - name: zoom
+          in: query
+          required: true
+          description: Google Mapsのズームレベル(1.0-22.0、少数対応)
+          schema:
+            type: number
+            format: double
+            minimum: 1.0
+            maximum: 22.0
+        - name: sw_lat
+          in: query
+          required: true
+          description: 南西端の緯度
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: sw_lng
+          in: query
+          required: true
+          description: 南西端の経度
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+        - name: ne_lat
+          in: query
+          required: true
+          description: 北東端の緯度
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: ne_lng
+          in: query
+          required: true
+          description: 北東端の経度
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+      responses:
+        "200":
+          description: クラスター一覧
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClusterListResponse"
+        "400":
+          description: リクエストパラメータが不正
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/clusters/recalculate:
+    post:
+      tags:
+        - clusters
+      summary: クラスター再計算リクエスト
+      description: |
+        クラスターの再計算ジョブをエンキューする。
+        既に保留中または処理中のジョブがある場合はスキップされる。
+      operationId: recalculateClusters
+      security: []
+      responses:
+        "202":
+          description: 再計算ジョブ受付
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecalculateResponse"
+        "409":
+          description: 既に再計算ジョブが実行中
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthResponse:
@@ -326,3 +434,55 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    Cluster:
+      type: object
+      required:
+        - h3Index
+        - lat
+        - lng
+        - count
+      properties:
+        h3Index:
+          type: string
+          description: H3インデックス(16進数文字列)
+          example: "831f8dfffffffff"
+        lat:
+          type: number
+          format: double
+          description: クラスター中心の緯度
+        lng:
+          type: number
+          format: double
+          description: クラスター中心の経度
+        count:
+          type: integer
+          description: クラスターに含まれる圃場数
+
+    ClusterListResponse:
+      type: object
+      required:
+        - clusters
+        - isStale
+      properties:
+        clusters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Cluster"
+        isStale:
+          type: boolean
+          description: クラスターが再計算中かどうか
+
+    RecalculateResponse:
+      type: object
+      required:
+        - message
+        - enqueued
+      properties:
+        message:
+          type: string
+          description: 処理結果メッセージ
+          example: "クラスター再計算ジョブをエンキューしました"
+        enqueued:
+          type: boolean
+          description: ジョブがエンキューされたかどうか
