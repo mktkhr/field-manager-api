@@ -10,6 +10,7 @@ import (
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/repository"
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/internal/h3util"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
+	"github.com/mktkhr/field-manager-api/internal/utils"
 )
 
 // clusterPostgresRepository はClusterRepositoryのPostgreSQL実装
@@ -28,7 +29,7 @@ func NewClusterPostgresRepository(pool *pgxpool.Pool) repository.ClusterReposito
 
 // GetClusters は指定解像度のクラスター結果を取得する
 func (r *clusterPostgresRepository) GetClusters(ctx context.Context, resolution entity.Resolution) ([]*entity.Cluster, error) {
-	results, err := r.queries.GetClusterResults(ctx, int32(resolution))
+	results, err := r.queries.GetClusterResults(ctx, utils.SafeIntToInt32(int(resolution)))
 	if err != nil {
 		return nil, fmt.Errorf("クラスター結果の取得に失敗しました: %w", err)
 	}
@@ -54,7 +55,7 @@ func (r *clusterPostgresRepository) SaveClusters(ctx context.Context, clusters [
 	for _, cluster := range clusters {
 		err := r.queries.UpsertClusterResult(ctx, &sqlc.UpsertClusterResultParams{
 			ID:         cluster.ID,
-			Resolution: int32(cluster.Resolution),
+			Resolution: utils.SafeIntToInt32(int(cluster.Resolution)),
 			H3Index:    cluster.H3Index,
 			FieldCount: cluster.FieldCount,
 			CenterLat:  cluster.CenterLat,
@@ -70,7 +71,7 @@ func (r *clusterPostgresRepository) SaveClusters(ctx context.Context, clusters [
 
 // DeleteClustersByResolution は指定解像度のクラスター結果を削除する
 func (r *clusterPostgresRepository) DeleteClustersByResolution(ctx context.Context, resolution entity.Resolution) error {
-	if err := r.queries.DeleteClusterResultsByResolution(ctx, int32(resolution)); err != nil {
+	if err := r.queries.DeleteClusterResultsByResolution(ctx, utils.SafeIntToInt32(int(resolution))); err != nil {
 		return fmt.Errorf("解像度%dのクラスター結果の削除に失敗しました: %w", resolution, err)
 	}
 	return nil
@@ -122,7 +123,7 @@ func (r *clusterPostgresRepository) DeleteClustersByH3Indexes(ctx context.Contex
 		return nil
 	}
 	if err := r.queries.DeleteClusterResultsByH3Indexes(ctx, &sqlc.DeleteClusterResultsByH3IndexesParams{
-		Resolution: int32(resolution),
+		Resolution: utils.SafeIntToInt32(int(resolution)),
 		H3Indexes:  h3Indexes,
 	}); err != nil {
 		return fmt.Errorf("H3インデックス指定でのクラスター結果の削除に失敗しました: %w", err)
