@@ -84,7 +84,7 @@ func (r *clusterPostgresRepository) DeleteAllClusters(ctx context.Context) error
 	return nil
 }
 
-// AggregateByH3 は指定解像度でfieldsテーブルを集計する
+// AggregateByH3 は指定解像度でfieldsテーブルを集計する(全範囲)
 func (r *clusterPostgresRepository) AggregateByH3(ctx context.Context, resolution entity.Resolution) ([]*repository.AggregatedCluster, error) {
 	switch resolution {
 	case entity.Res3:
@@ -98,6 +98,36 @@ func (r *clusterPostgresRepository) AggregateByH3(ctx context.Context, resolutio
 	default:
 		return nil, fmt.Errorf("未対応の解像度です: %d", resolution)
 	}
+}
+
+// AggregateByH3ForCells は指定H3セルのみfieldsテーブルを集計する(差分更新用)
+func (r *clusterPostgresRepository) AggregateByH3ForCells(ctx context.Context, resolution entity.Resolution, h3Cells []string) ([]*repository.AggregatedCluster, error) {
+	switch resolution {
+	case entity.Res3:
+		return r.aggregateRes3ForCells(ctx, h3Cells)
+	case entity.Res5:
+		return r.aggregateRes5ForCells(ctx, h3Cells)
+	case entity.Res7:
+		return r.aggregateRes7ForCells(ctx, h3Cells)
+	case entity.Res9:
+		return r.aggregateRes9ForCells(ctx, h3Cells)
+	default:
+		return nil, fmt.Errorf("未対応の解像度です: %d", resolution)
+	}
+}
+
+// DeleteClustersByH3Indexes は指定H3インデックスのクラスター結果を削除する
+func (r *clusterPostgresRepository) DeleteClustersByH3Indexes(ctx context.Context, resolution entity.Resolution, h3Indexes []string) error {
+	if len(h3Indexes) == 0 {
+		return nil
+	}
+	if err := r.queries.DeleteClusterResultsByH3Indexes(ctx, &sqlc.DeleteClusterResultsByH3IndexesParams{
+		Resolution: int32(resolution),
+		H3Indexes:  h3Indexes,
+	}); err != nil {
+		return fmt.Errorf("H3インデックス指定でのクラスター結果の削除に失敗しました: %w", err)
+	}
+	return nil
 }
 
 func (r *clusterPostgresRepository) aggregateRes3(ctx context.Context) ([]*repository.AggregatedCluster, error) {
@@ -161,6 +191,82 @@ func (r *clusterPostgresRepository) aggregateRes9(ctx context.Context) ([]*repos
 	rows, err := r.queries.AggregateClustersByRes9(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("解像度9での集計に失敗しました: %w", err)
+	}
+
+	result := make([]*repository.AggregatedCluster, 0, len(rows))
+	for _, row := range rows {
+		if row.H3Index == nil {
+			continue
+		}
+		result = append(result, &repository.AggregatedCluster{
+			H3Index:    *row.H3Index,
+			FieldCount: row.FieldCount,
+		})
+	}
+	return result, nil
+}
+
+func (r *clusterPostgresRepository) aggregateRes3ForCells(ctx context.Context, h3Cells []string) ([]*repository.AggregatedCluster, error) {
+	rows, err := r.queries.AggregateClustersByRes3ForCells(ctx, h3Cells)
+	if err != nil {
+		return nil, fmt.Errorf("解像度3での差分集計に失敗しました: %w", err)
+	}
+
+	result := make([]*repository.AggregatedCluster, 0, len(rows))
+	for _, row := range rows {
+		if row.H3Index == nil {
+			continue
+		}
+		result = append(result, &repository.AggregatedCluster{
+			H3Index:    *row.H3Index,
+			FieldCount: row.FieldCount,
+		})
+	}
+	return result, nil
+}
+
+func (r *clusterPostgresRepository) aggregateRes5ForCells(ctx context.Context, h3Cells []string) ([]*repository.AggregatedCluster, error) {
+	rows, err := r.queries.AggregateClustersByRes5ForCells(ctx, h3Cells)
+	if err != nil {
+		return nil, fmt.Errorf("解像度5での差分集計に失敗しました: %w", err)
+	}
+
+	result := make([]*repository.AggregatedCluster, 0, len(rows))
+	for _, row := range rows {
+		if row.H3Index == nil {
+			continue
+		}
+		result = append(result, &repository.AggregatedCluster{
+			H3Index:    *row.H3Index,
+			FieldCount: row.FieldCount,
+		})
+	}
+	return result, nil
+}
+
+func (r *clusterPostgresRepository) aggregateRes7ForCells(ctx context.Context, h3Cells []string) ([]*repository.AggregatedCluster, error) {
+	rows, err := r.queries.AggregateClustersByRes7ForCells(ctx, h3Cells)
+	if err != nil {
+		return nil, fmt.Errorf("解像度7での差分集計に失敗しました: %w", err)
+	}
+
+	result := make([]*repository.AggregatedCluster, 0, len(rows))
+	for _, row := range rows {
+		if row.H3Index == nil {
+			continue
+		}
+		result = append(result, &repository.AggregatedCluster{
+			H3Index:    *row.H3Index,
+			FieldCount: row.FieldCount,
+		})
+	}
+	return result, nil
+}
+
+func (r *clusterPostgresRepository) aggregateRes9ForCells(ctx context.Context, h3Cells []string) ([]*repository.AggregatedCluster, error) {
+	rows, err := r.queries.AggregateClustersByRes9ForCells(ctx, h3Cells)
+	if err != nil {
+		return nil, fmt.Errorf("解像度9での差分集計に失敗しました: %w", err)
 	}
 
 	result := make([]*repository.AggregatedCluster, 0, len(rows))

@@ -26,11 +26,24 @@ func NewClusterJobPostgresRepository(pool *pgxpool.Pool) repository.ClusterJobRe
 	}
 }
 
-// Create は新しいクラスタージョブを作成する
+// Create は新しいクラスタージョブを作成する(全範囲再計算)
 func (r *clusterJobPostgresRepository) Create(ctx context.Context, job *entity.ClusterJob) error {
 	_, err := r.queries.CreateClusterJob(ctx, &sqlc.CreateClusterJobParams{
 		ID:       job.ID,
 		Priority: job.Priority,
+	})
+	if err != nil {
+		return fmt.Errorf("クラスタージョブの作成に失敗しました: %w", err)
+	}
+	return nil
+}
+
+// CreateWithAffectedCells は影響セル情報付きでクラスタージョブを作成する
+func (r *clusterJobPostgresRepository) CreateWithAffectedCells(ctx context.Context, job *entity.ClusterJob) error {
+	_, err := r.queries.CreateClusterJobWithAffectedCells(ctx, &sqlc.CreateClusterJobWithAffectedCellsParams{
+		ID:              job.ID,
+		Priority:        job.Priority,
+		AffectedH3Cells: job.AffectedH3Cells,
 	})
 	if err != nil {
 		return fmt.Errorf("クラスタージョブの作成に失敗しました: %w", err)
@@ -45,7 +58,7 @@ func (r *clusterJobPostgresRepository) FindByID(ctx context.Context, id uuid.UUI
 		return nil, fmt.Errorf("クラスタージョブの取得に失敗しました: %w", err)
 	}
 
-	return convertToClusterJobEntity(result), nil
+	return convertGetClusterJobRowToEntity(result), nil
 }
 
 // FindPendingJobs は保留中のジョブを優先度順に取得する(排他ロック付き)
@@ -57,7 +70,22 @@ func (r *clusterJobPostgresRepository) FindPendingJobs(ctx context.Context, limi
 
 	jobs := make([]*entity.ClusterJob, 0, len(results))
 	for _, result := range results {
-		jobs = append(jobs, convertToClusterJobEntity(result))
+		jobs = append(jobs, convertGetPendingClusterJobsRowToEntity(result))
+	}
+
+	return jobs, nil
+}
+
+// FindPendingJobsWithAffectedCells は影響セル情報付きで保留中のジョブを取得する
+func (r *clusterJobPostgresRepository) FindPendingJobsWithAffectedCells(ctx context.Context, limit int32) ([]*entity.ClusterJob, error) {
+	results, err := r.queries.GetPendingClusterJobsWithAffectedCells(ctx, limit)
+	if err != nil {
+		return nil, fmt.Errorf("保留中ジョブの取得に失敗しました: %w", err)
+	}
+
+	jobs := make([]*entity.ClusterJob, 0, len(results))
+	for _, result := range results {
+		jobs = append(jobs, convertToClusterJobEntityWithAffectedCells(result))
 	}
 
 	return jobs, nil
@@ -122,6 +150,85 @@ func convertToClusterJobEntity(job *sqlc.ClusterJob) *entity.ClusterJob {
 		Status:    entity.JobStatus(job.Status),
 		Priority:  job.Priority,
 		CreatedAt: job.CreatedAt.Time,
+	}
+
+	if job.StartedAt.Valid {
+		t := job.StartedAt.Time
+		result.StartedAt = &t
+	}
+
+	if job.CompletedAt.Valid {
+		t := job.CompletedAt.Time
+		result.CompletedAt = &t
+	}
+
+	if job.ErrorMessage != nil {
+		result.ErrorMessage = *job.ErrorMessage
+	}
+
+	return result
+}
+
+// convertGetClusterJobRowToEntity はGetClusterJobの結果をエンティティに変換する
+func convertGetClusterJobRowToEntity(job *sqlc.GetClusterJobRow) *entity.ClusterJob {
+	result := &entity.ClusterJob{
+		ID:        job.ID,
+		Status:    entity.JobStatus(job.Status),
+		Priority:  job.Priority,
+		CreatedAt: job.CreatedAt.Time,
+	}
+
+	if job.StartedAt.Valid {
+		t := job.StartedAt.Time
+		result.StartedAt = &t
+	}
+
+	if job.CompletedAt.Valid {
+		t := job.CompletedAt.Time
+		result.CompletedAt = &t
+	}
+
+	if job.ErrorMessage != nil {
+		result.ErrorMessage = *job.ErrorMessage
+	}
+
+	return result
+}
+
+// convertGetPendingClusterJobsRowToEntity はGetPendingClusterJobsの結果をエンティティに変換する
+func convertGetPendingClusterJobsRowToEntity(job *sqlc.GetPendingClusterJobsRow) *entity.ClusterJob {
+	result := &entity.ClusterJob{
+		ID:        job.ID,
+		Status:    entity.JobStatus(job.Status),
+		Priority:  job.Priority,
+		CreatedAt: job.CreatedAt.Time,
+	}
+
+	if job.StartedAt.Valid {
+		t := job.StartedAt.Time
+		result.StartedAt = &t
+	}
+
+	if job.CompletedAt.Valid {
+		t := job.CompletedAt.Time
+		result.CompletedAt = &t
+	}
+
+	if job.ErrorMessage != nil {
+		result.ErrorMessage = *job.ErrorMessage
+	}
+
+	return result
+}
+
+// convertToClusterJobEntityWithAffectedCells は影響セル情報付きでSQLCの結果をエンティティに変換する
+func convertToClusterJobEntityWithAffectedCells(job *sqlc.GetPendingClusterJobsWithAffectedCellsRow) *entity.ClusterJob {
+	result := &entity.ClusterJob{
+		ID:              job.ID,
+		Status:          entity.JobStatus(job.Status),
+		Priority:        job.Priority,
+		AffectedH3Cells: job.AffectedH3Cells,
+		CreatedAt:       job.CreatedAt.Time,
 	}
 
 	if job.StartedAt.Valid {

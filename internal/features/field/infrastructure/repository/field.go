@@ -284,3 +284,37 @@ func geometryToWKB(g geom.T) ([]byte, error) {
 
 	return wkb.Marshal(g, binary.LittleEndian)
 }
+
+// GetH3IndexesByFieldIDs は指定IDのフィールドの既存H3インデックスを取得する(差分更新用)
+func (r *fieldRepository) GetH3IndexesByFieldIDs(ctx context.Context, fieldIDs []string) ([]importdto.FieldH3Prefetch, error) {
+	uuids := make([]uuid.UUID, 0, len(fieldIDs))
+	for _, id := range fieldIDs {
+		u, err := uuid.Parse(id)
+		if err != nil {
+			// 無効なIDはスキップ
+			continue
+		}
+		uuids = append(uuids, u)
+	}
+
+	if len(uuids) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.queries.GetH3IndexesByFieldIDs(ctx, uuids)
+	if err != nil {
+		return nil, fmt.Errorf("H3インデックスの取得に失敗: %w", err)
+	}
+
+	result := make([]importdto.FieldH3Prefetch, len(rows))
+	for i, row := range rows {
+		result[i] = importdto.FieldH3Prefetch{
+			ID:          row.ID.String(),
+			H3IndexRes3: row.H3IndexRes3,
+			H3IndexRes5: row.H3IndexRes5,
+			H3IndexRes7: row.H3IndexRes7,
+			H3IndexRes9: row.H3IndexRes9,
+		}
+	}
+	return result, nil
+}
