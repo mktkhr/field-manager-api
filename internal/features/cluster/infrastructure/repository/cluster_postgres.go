@@ -51,8 +51,22 @@ func (r *clusterPostgresRepository) GetClusters(ctx context.Context, resolution 
 
 // SaveClusters は複数のクラスター結果を保存する
 func (r *clusterPostgresRepository) SaveClusters(ctx context.Context, clusters []*entity.Cluster) error {
+	if len(clusters) == 0 {
+		return nil
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("トランザクション開始に失敗しました: %w", err)
+	}
+	defer func() {
+		// コミット後のロールバックは"tx is closed"エラーになるため無視
+		_ = tx.Rollback(ctx)
+	}()
+
+	queries := r.queries.WithTx(tx)
 	for _, cluster := range clusters {
-		err := r.queries.UpsertClusterResult(ctx, &sqlc.UpsertClusterResultParams{
+		err := queries.UpsertClusterResult(ctx, &sqlc.UpsertClusterResultParams{
 			ID:         cluster.ID,
 			Resolution: utils.SafeIntToInt32(int(cluster.Resolution)),
 			H3Index:    cluster.H3Index,
@@ -283,25 +297,4 @@ func (r *clusterPostgresRepository) aggregateRes9ForCells(ctx context.Context, h
 		})
 	}
 	return result, nil
-}
-
-// ConvertAggregatedToClusters は集計結果をClusterエンティティに変換する
-func ConvertAggregatedToClusters(resolution entity.Resolution, aggregated []*repository.AggregatedCluster) ([]*entity.Cluster, error) {
-	clusters := make([]*entity.Cluster, 0, len(aggregated))
-	for _, agg := range aggregated {
-		lat, lng, err := h3util.CellToLatLng(agg.H3Index)
-		if err != nil {
-			// 無効なH3インデックスはスキップ
-			continue
-		}
-
-		clusters = append(clusters, entity.NewCluster(
-			resolution,
-			agg.H3Index,
-			agg.FieldCount,
-			lat,
-			lng,
-		))
-	}
-	return clusters, nil
 }
