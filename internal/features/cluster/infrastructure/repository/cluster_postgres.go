@@ -4,7 +4,9 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/repository"
@@ -60,8 +62,10 @@ func (r *clusterPostgresRepository) SaveClusters(ctx context.Context, clusters [
 		return fmt.Errorf("トランザクション開始に失敗しました: %w", err)
 	}
 	defer func() {
-		// コミット後のロールバックは"tx is closed"エラーになるため無視
-		_ = tx.Rollback(ctx)
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			slog.Error("トランザクションのロールバックに失敗。データ不整合の可能性があります",
+				slog.String("error", err.Error()))
+		}
 	}()
 
 	queries := r.queries.WithTx(tx)
