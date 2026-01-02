@@ -71,10 +71,11 @@ func (m *mockClusterCacheRepository) DeleteClusters(_ context.Context) error {
 type mockClusterJobRepository struct {
 	hasPendingJob bool
 	hasPendingErr error
+	createErr     error
 }
 
 func (m *mockClusterJobRepository) Create(_ context.Context, _ *entity.ClusterJob) error {
-	return nil
+	return m.createErr
 }
 
 func (m *mockClusterJobRepository) FindByID(_ context.Context, _ uuid.UUID) (*entity.ClusterJob, error) {
@@ -125,7 +126,8 @@ func TestNewClusterHandler(t *testing.T) {
 	logger := getTestLogger()
 
 	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-	handler := NewClusterHandler(getClustersUC, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 	require.NotNil(t, handler, "ハンドラーがnilです")
 }
@@ -150,7 +152,8 @@ func TestClusterHandler_GetClusters_Success(t *testing.T) {
 	logger := getTestLogger()
 
 	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-	handler := NewClusterHandler(getClustersUC, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 	request := openapi.GetClustersRequestObject{
 		Params: openapi.GetClustersParams{
@@ -193,7 +196,8 @@ func TestClusterHandler_GetClusters_ValidationError_ZoomOutOfRange(t *testing.T)
 			logger := getTestLogger()
 
 			getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-			handler := NewClusterHandler(getClustersUC, logger)
+			enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+			handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 			request := openapi.GetClustersRequestObject{
 				Params: openapi.GetClustersParams{
@@ -235,7 +239,8 @@ func TestClusterHandler_GetClusters_ValidationError_LatOutOfRange(t *testing.T) 
 			logger := getTestLogger()
 
 			getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-			handler := NewClusterHandler(getClustersUC, logger)
+			enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+			handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 			request := openapi.GetClustersRequestObject{
 				Params: openapi.GetClustersParams{
@@ -277,7 +282,8 @@ func TestClusterHandler_GetClusters_ValidationError_LngOutOfRange(t *testing.T) 
 			logger := getTestLogger()
 
 			getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-			handler := NewClusterHandler(getClustersUC, logger)
+			enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+			handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 			request := openapi.GetClustersRequestObject{
 				Params: openapi.GetClustersParams{
@@ -306,7 +312,8 @@ func TestClusterHandler_GetClusters_ValidationError_SwLatGreaterThanNeLat(t *tes
 	logger := getTestLogger()
 
 	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-	handler := NewClusterHandler(getClustersUC, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 	request := openapi.GetClustersRequestObject{
 		Params: openapi.GetClustersParams{
@@ -333,7 +340,8 @@ func TestClusterHandler_GetClusters_UseCaseError(t *testing.T) {
 	logger := getTestLogger()
 
 	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-	handler := NewClusterHandler(getClustersUC, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 	request := openapi.GetClustersRequestObject{
 		Params: openapi.GetClustersParams{
@@ -372,7 +380,8 @@ func TestClusterHandler_GetClusters_IsStale(t *testing.T) {
 	logger := getTestLogger()
 
 	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-	handler := NewClusterHandler(getClustersUC, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 	request := openapi.GetClustersRequestObject{
 		Params: openapi.GetClustersParams{
@@ -401,7 +410,8 @@ func TestClusterHandler_GetClusters_EmptyClusters(t *testing.T) {
 	logger := getTestLogger()
 
 	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-	handler := NewClusterHandler(getClustersUC, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 	request := openapi.GetClustersRequestObject{
 		Params: openapi.GetClustersParams{
@@ -442,7 +452,8 @@ func TestClusterHandler_GetClusters_BoundaryValues_Zoom(t *testing.T) {
 			logger := getTestLogger()
 
 			getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-			handler := NewClusterHandler(getClustersUC, logger)
+			enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+			handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 			request := openapi.GetClustersRequestObject{
 				Params: openapi.GetClustersParams{
@@ -483,7 +494,8 @@ func TestClusterHandler_GetClusters_BoundaryValues_Lat(t *testing.T) {
 			logger := getTestLogger()
 
 			getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-			handler := NewClusterHandler(getClustersUC, logger)
+			enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+			handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 			request := openapi.GetClustersRequestObject{
 				Params: openapi.GetClustersParams{
@@ -524,7 +536,8 @@ func TestClusterHandler_GetClusters_BoundaryValues_Lng(t *testing.T) {
 			logger := getTestLogger()
 
 			getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
-			handler := NewClusterHandler(getClustersUC, logger)
+			enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+			handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 			request := openapi.GetClustersRequestObject{
 				Params: openapi.GetClustersParams{
@@ -568,4 +581,76 @@ func TestValidationError_Field(t *testing.T) {
 	if err.Field != "sw_lat" {
 		t.Errorf("Field = %q, 期待値 sw_lat", err.Field)
 	}
+}
+
+// TestClusterHandler_RecalculateClusters_Success は正常にジョブをエンキューすることをテストする
+func TestClusterHandler_RecalculateClusters_Success(t *testing.T) {
+	clusterRepo := &mockClusterRepository{}
+	cacheRepo := &mockClusterCacheRepository{}
+	jobRepo := &mockClusterJobRepository{hasPendingJob: false}
+	logger := getTestLogger()
+
+	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
+
+	request := openapi.RecalculateClustersRequestObject{}
+
+	response, err := handler.RecalculateClusters(context.Background(), request)
+
+	require.NoError(t, err, "RecalculateClustersでエラーが発生")
+	require.NotNil(t, response, "レスポンスがnilです")
+
+	resp202, ok := response.(openapi.RecalculateClusters202JSONResponse)
+	require.True(t, ok, "202レスポンスを期待")
+	require.True(t, resp202.Enqueued, "Enqueuedがtrueであるべき")
+}
+
+// TestClusterHandler_RecalculateClusters_AlreadyRunning は既にジョブが実行中の場合に409を返すことをテストする
+func TestClusterHandler_RecalculateClusters_AlreadyRunning(t *testing.T) {
+	clusterRepo := &mockClusterRepository{}
+	cacheRepo := &mockClusterCacheRepository{}
+	jobRepo := &mockClusterJobRepository{hasPendingJob: true}
+	logger := getTestLogger()
+
+	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
+
+	request := openapi.RecalculateClustersRequestObject{}
+
+	response, err := handler.RecalculateClusters(context.Background(), request)
+
+	require.NoError(t, err, "RecalculateClustersでエラーが発生")
+	require.NotNil(t, response, "レスポンスがnilです")
+
+	resp409, ok := response.(openapi.RecalculateClusters409JSONResponse)
+	require.True(t, ok, "409レスポンスを期待")
+	require.Equal(t, "already_running", resp409.Code, "エラーコードがalready_runningであるべき")
+}
+
+// TestClusterHandler_RecalculateClusters_Error はエンキューエラー時に500を返すことをテストする
+func TestClusterHandler_RecalculateClusters_Error(t *testing.T) {
+	clusterRepo := &mockClusterRepository{}
+	cacheRepo := &mockClusterCacheRepository{}
+	jobRepo := &mockClusterJobRepository{
+		hasPendingJob: false,
+		createErr:     errors.New("db error"),
+	}
+	logger := getTestLogger()
+
+	getClustersUC := usecase.NewGetClustersUseCase(clusterRepo, cacheRepo, jobRepo, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(jobRepo, logger)
+	handler := NewClusterHandler(getClustersUC, enqueueJobUC, logger)
+
+	request := openapi.RecalculateClustersRequestObject{}
+
+	response, err := handler.RecalculateClusters(context.Background(), request)
+
+	require.NoError(t, err, "RecalculateClustersでエラーが発生")
+	require.NotNil(t, response, "レスポンスがnilです")
+
+	resp500, ok := response.(openapi.RecalculateClusters500JSONResponse)
+	require.True(t, ok, "500レスポンスを期待")
+	require.Equal(t, "internal_error", resp500.Code, "エラーコードがinternal_errorであるべき")
 }

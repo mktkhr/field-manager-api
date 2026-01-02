@@ -12,16 +12,19 @@ import (
 // ClusterHandler はクラスターAPIのハンドラー
 type ClusterHandler struct {
 	getClustersUC *usecase.GetClustersUseCase
+	enqueueJobUC  *usecase.EnqueueJobUseCase
 	logger        *slog.Logger
 }
 
 // NewClusterHandler はClusterHandlerを作成する
 func NewClusterHandler(
 	getClustersUC *usecase.GetClustersUseCase,
+	enqueueJobUC *usecase.EnqueueJobUseCase,
 	logger *slog.Logger,
 ) *ClusterHandler {
 	return &ClusterHandler{
 		getClustersUC: getClustersUC,
+		enqueueJobUC:  enqueueJobUC,
 		logger:        logger,
 	}
 }
@@ -111,4 +114,31 @@ type ValidationError struct {
 
 func (e *ValidationError) Error() string {
 	return e.Message
+}
+
+// RecalculateClusters はクラスター再計算ジョブをエンキューする
+func (h *ClusterHandler) RecalculateClusters(ctx context.Context, _ openapi.RecalculateClustersRequestObject) (openapi.RecalculateClustersResponseObject, error) {
+	output, err := h.enqueueJobUC.Execute(ctx, usecase.EnqueueJobInput{
+		Priority: 10, // 手動実行は優先度高め
+	})
+	if err != nil {
+		h.logger.Error("クラスター再計算ジョブのエンキューに失敗しました",
+			slog.String("error", err.Error()))
+		return openapi.RecalculateClusters500JSONResponse{
+			Code:    "internal_error",
+			Message: "クラスター再計算ジョブのエンキューに失敗しました",
+		}, nil
+	}
+
+	if !output.Enqueued {
+		return openapi.RecalculateClusters409JSONResponse{
+			Code:    "already_running",
+			Message: "既にクラスター再計算ジョブが実行中です",
+		}, nil
+	}
+
+	return openapi.RecalculateClusters202JSONResponse{
+		Message:  "クラスター再計算ジョブをエンキューしました",
+		Enqueued: true,
+	}, nil
 }
