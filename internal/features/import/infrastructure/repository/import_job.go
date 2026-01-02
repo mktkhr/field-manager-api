@@ -19,13 +19,15 @@ var jsonMarshal = json.Marshal
 type importJobRepository struct {
 	db      *pgxpool.Pool
 	queries *sqlc.Queries
+	logger  *slog.Logger
 }
 
 // NewImportJobRepository は新しいImportJobRepositoryを作成する
-func NewImportJobRepository(db *pgxpool.Pool) repository.ImportJobRepository {
+func NewImportJobRepository(db *pgxpool.Pool, logger *slog.Logger) repository.ImportJobRepository {
 	return &importJobRepository{
 		db:      db,
 		queries: sqlc.New(db),
+		logger:  logger,
 	}
 }
 
@@ -151,7 +153,9 @@ func (r *importJobRepository) toEntity(row *sqlc.ImportJob) *entity.ImportJob {
 		var ids []string
 		if err := json.Unmarshal(row.FailedRecordIds, &ids); err != nil {
 			// DBに保存されたJSONは通常有効なはずだが、デバッグのためにログ出力
-			slog.Warn("失敗レコードIDのパースに失敗", "job_id", row.ID, "error", err)
+			r.logger.Warn("失敗レコードIDのパースに失敗",
+				slog.String("job_id", row.ID.String()),
+				slog.String("error", err.Error()))
 		} else {
 			job.FailedRecordIDs = ids
 		}

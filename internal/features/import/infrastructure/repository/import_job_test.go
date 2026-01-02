@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -149,7 +150,7 @@ func TestImportJobRepository_ToEntity(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &importJobRepository{}
+			r := &importJobRepository{logger: slog.Default()}
 			result := r.toEntity(tt.row)
 
 			if tt.want == nil {
@@ -211,7 +212,7 @@ func TestImportJobRepository_ToEntity_FullFieldMapping(t *testing.T) {
 		CompletedAt:        pgtype.Timestamptz{Time: completedAt, Valid: true},
 	}
 
-	r := &importJobRepository{}
+	r := &importJobRepository{logger: slog.Default()}
 	result := r.toEntity(row)
 
 	// ID
@@ -314,7 +315,7 @@ func TestImportJobRepository_ToEntity_NullableFields(t *testing.T) {
 		CompletedAt:      pgtype.Timestamptz{Valid: false},
 	}
 
-	r := &importJobRepository{}
+	r := &importJobRepository{logger: slog.Default()}
 	result := r.toEntity(row)
 
 	if result.TotalRecords != nil {
@@ -357,7 +358,7 @@ func TestImportJobRepository_ToEntity_InvalidFailedRecordIDs(t *testing.T) {
 		CreatedAt:        pgtype.Timestamptz{Time: now, Valid: true},
 	}
 
-	r := &importJobRepository{}
+	r := &importJobRepository{logger: slog.Default()}
 	result := r.toEntity(row)
 
 	// 無効なJSONの場合、空のスライスになるはず
@@ -383,7 +384,7 @@ func TestImportJobRepository_ToEntity_EmptyFailedRecordIDs(t *testing.T) {
 		CreatedAt:        pgtype.Timestamptz{Time: now, Valid: true},
 	}
 
-	r := &importJobRepository{}
+	r := &importJobRepository{logger: slog.Default()}
 	result := r.toEntity(row)
 
 	if len(result.FailedRecordIDs) != 0 {
@@ -415,7 +416,7 @@ func TestImportJobRepository_ToEntity_AllStatuses(t *testing.T) {
 				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 			}
 
-			r := &importJobRepository{}
+			r := &importJobRepository{logger: slog.Default()}
 			result := r.toEntity(row)
 
 			if result.Status != s.expected {
@@ -440,7 +441,7 @@ func TestImportJobRepository_ToEntity_TimestampConversion(t *testing.T) {
 		CompletedAt: pgtype.Timestamptz{Time: completedAt, Valid: true},
 	}
 
-	r := &importJobRepository{}
+	r := &importJobRepository{logger: slog.Default()}
 	result := r.toEntity(row)
 
 	// CreatedAtの時刻が正しく変換されていることを確認
@@ -485,7 +486,7 @@ func TestImportJobRepository_ToEntity_LargeFailedRecordIDs(t *testing.T) {
 		CreatedAt:        pgtype.Timestamptz{Time: now, Valid: true},
 	}
 
-	r := &importJobRepository{}
+	r := &importJobRepository{logger: slog.Default()}
 	result := r.toEntity(row)
 
 	if len(result.FailedRecordIDs) != 1000 {
@@ -550,7 +551,7 @@ func TestImportJobRepository_ToEntity_ProgressCalculation(t *testing.T) {
 				CreatedAt:        pgtype.Timestamptz{Time: now, Valid: true},
 			}
 
-			r := &importJobRepository{}
+			r := &importJobRepository{logger: slog.Default()}
 			result := r.toEntity(row)
 
 			// Progress()メソッドを使用して進捗を計算
@@ -573,7 +574,7 @@ func TestImportJobRepository_UpdateError_MarshalError(t *testing.T) {
 		return nil, marshalError
 	}
 
-	repo := &importJobRepository{}
+	repo := &importJobRepository{logger: slog.Default()}
 
 	err := repo.UpdateError(context.Background(), uuid.New(), "error message", []string{"id1", "id2"})
 	if err == nil {
