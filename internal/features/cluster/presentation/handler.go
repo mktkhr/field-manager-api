@@ -9,6 +9,11 @@ import (
 	"github.com/mktkhr/field-manager-api/internal/generated/openapi"
 )
 
+const (
+	// PriorityManualRecalculation は手動再計算の優先度
+	PriorityManualRecalculation = 10
+)
+
 // ClusterHandler はクラスターAPIのハンドラー
 type ClusterHandler struct {
 	getClustersUC *usecase.GetClustersUseCase
@@ -119,7 +124,7 @@ func (e *ValidationError) Error() string {
 // RecalculateClusters はクラスター再計算ジョブをエンキューする
 func (h *ClusterHandler) RecalculateClusters(ctx context.Context, _ openapi.RecalculateClustersRequestObject) (openapi.RecalculateClustersResponseObject, error) {
 	output, err := h.enqueueJobUC.Execute(ctx, usecase.EnqueueJobInput{
-		Priority: 10, // 手動実行は優先度高め
+		Priority: PriorityManualRecalculation,
 	})
 	if err != nil {
 		h.logger.Error("クラスター再計算ジョブのエンキューに失敗しました",
