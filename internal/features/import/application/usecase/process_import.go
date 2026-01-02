@@ -24,12 +24,16 @@ const (
 type FieldRepository interface {
 	// UpsertBatch は圃場をバッチでUPSERTする
 	UpsertBatch(ctx context.Context, inputs []dto.FieldBatchInput) error
+	// GetH3IndexesByFieldIDs は指定IDのフィールドの既存H3インデックスを取得する(差分更新用)
+	GetH3IndexesByFieldIDs(ctx context.Context, fieldIDs []string) ([]dto.FieldH3Prefetch, error)
 }
 
 // ClusterJobEnqueuer はクラスタージョブをエンキューするインターフェース(Consumer側で定義)
 type ClusterJobEnqueuer interface {
-	// Enqueue はクラスター計算ジョブをエンキューする
+	// Enqueue はクラスター計算ジョブをエンキューする(全範囲再計算)
 	Enqueue(ctx context.Context, priority int32) error
+	// EnqueueWithAffectedCells は影響セル情報付きでクラスター計算ジョブをエンキューする(差分更新)
+	EnqueueWithAffectedCells(ctx context.Context, priority int32, affectedCells []string) error
 }
 
 // ProcessImportInput はインポート処理の入力
@@ -103,6 +107,9 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 		failedIDs      []string
 	)
 
+	// 差分更新用の影響セル収集
+	affectedH3Cells := dto.NewH3IndexSet()
+
 	for decoder.More() {
 		var feature entity.WagriFeature
 		if err := decoder.Decode(&feature); err != nil {
@@ -118,7 +125,7 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 
 		if len(batch) >= input.BatchSize {
 			batchNumber++
-			if err := uc.processBatch(ctx, batch); err != nil {
+			if err := uc.processBatchWithH3Collection(ctx, batch, affectedH3Cells); err != nil {
 				uc.logger.Error("バッチ処理に失敗", "batch", batchNumber, "error", err)
 				for _, f := range batch {
 					failedIDs = append(failedIDs, f.Properties.ID)
@@ -140,7 +147,7 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 	// 残りのバッチを処理
 	if len(batch) > 0 {
 		batchNumber++
-		if err := uc.processBatch(ctx, batch); err != nil {
+		if err := uc.processBatchWithH3Collection(ctx, batch, affectedH3Cells); err != nil {
 			uc.logger.Error("最終バッチ処理に失敗", "batch", batchNumber, "error", err)
 			for _, f := range batch {
 				failedIDs = append(failedIDs, f.Properties.ID)
@@ -186,14 +193,25 @@ func (uc *ProcessImportUseCase) Execute(ctx context.Context, input ProcessImport
 		"processed", processedCount,
 		"failed", failedCount,
 		"status", finalStatus,
+		"affected_h3_cells", affectedH3Cells.Len(),
 	)
 
-	// インポート完了後にクラスター計算ジョブをエンキュー
+	// インポート完了後にクラスター計算ジョブをエンキュー(差分更新)
 	if uc.clusterJobEnqueuer != nil && processedCount > 0 {
-		if err := uc.clusterJobEnqueuer.Enqueue(ctx, 1); err != nil {
-			uc.logger.Warn("クラスタージョブのエンキューに失敗しました",
-				"error", err.Error())
-			// エラーでもインポート自体は成功とする
+		affectedCells := affectedH3Cells.ToSlice()
+		if len(affectedCells) > 0 {
+			// 差分更新用ジョブをエンキュー
+			if err := uc.clusterJobEnqueuer.EnqueueWithAffectedCells(ctx, 1, affectedCells); err != nil {
+				uc.logger.Warn("差分更新用クラスタージョブのエンキューに失敗しました",
+					"error", err.Error())
+				// エラーでもインポート自体は成功とする
+			}
+		} else {
+			// 影響セルが収集できなかった場合は全範囲再計算にフォールバック
+			if err := uc.clusterJobEnqueuer.Enqueue(ctx, 1); err != nil {
+				uc.logger.Warn("クラスタージョブのエンキューに失敗しました",
+					"error", err.Error())
+			}
 		}
 	}
 
@@ -234,10 +252,48 @@ func (uc *ProcessImportUseCase) seekToTargetFeatures(decoder *json.Decoder) erro
 	return apperror.InternalError("targetFeaturesが見つかりません")
 }
 
-// processBatch はバッチを処理する
-func (uc *ProcessImportUseCase) processBatch(ctx context.Context, batch []entity.WagriFeature) error {
+// processBatchWithH3Collection はバッチを処理し、影響を受けたH3セルを収集する
+func (uc *ProcessImportUseCase) processBatchWithH3Collection(ctx context.Context, batch []entity.WagriFeature, affectedH3Cells *dto.H3IndexSet) error {
+	// バッチ内のフィールドIDを収集
+	fieldIDs := make([]string, len(batch))
+	for i, feature := range batch {
+		fieldIDs[i] = feature.Properties.ID
+	}
+
+	// 1. 既存のH3インデックスをプリフェッチ(更新前の旧H3セル)
+	existingH3, err := uc.fieldRepo.GetH3IndexesByFieldIDs(ctx, fieldIDs)
+	if err != nil {
+		uc.logger.Warn("既存H3インデックスの取得に失敗しました(差分更新に影響)",
+			"error", err.Error())
+		// エラーでも処理を続行(差分更新が不完全になる可能性はある)
+	} else {
+		// 旧H3セルをaffectedH3Cellsに追加
+		for _, h3Info := range existingH3 {
+			affectedH3Cells.AddAll(h3Info.AllIndexes()...)
+		}
+	}
+
+	// 2. バッチをUPSERT
 	inputs := convertWagriFeaturesToFieldBatchInputs(batch)
-	return uc.fieldRepo.UpsertBatch(ctx, inputs)
+	if err := uc.fieldRepo.UpsertBatch(ctx, inputs); err != nil {
+		return err
+	}
+
+	// 3. 新しいH3インデックスをプリフェッチ(更新後の新H3セル)
+	// UpsertBatch後に再度取得することで、計算されたH3インデックスを取得
+	newH3, err := uc.fieldRepo.GetH3IndexesByFieldIDs(ctx, fieldIDs)
+	if err != nil {
+		uc.logger.Warn("新H3インデックスの取得に失敗しました(差分更新に影響)",
+			"error", err.Error())
+		// エラーでも処理を続行
+	} else {
+		// 新H3セルをaffectedH3Cellsに追加
+		for _, h3Info := range newH3 {
+			affectedH3Cells.AddAll(h3Info.AllIndexes()...)
+		}
+	}
+
+	return nil
 }
 
 // convertWagriFeaturesToFieldBatchInputs はWagriFeatureをFieldBatchInputに変換する
