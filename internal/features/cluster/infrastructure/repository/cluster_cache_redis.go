@@ -49,6 +49,10 @@ func buildCacheKey(resolution entity.Resolution) string {
 }
 
 // GetClusters はキャッシュから指定解像度のクラスター結果を取得する
+//
+// キャッシュは解像度ごとの全範囲データを保持する。
+// バウンディングボックスによるフィルタリングはApplication層(UseCase)で行う。
+// この設計により、同一解像度のリクエストでキャッシュを共有でき、効率が向上する。
 func (r *clusterCacheRedisRepository) GetClusters(ctx context.Context, resolution entity.Resolution) ([]*entity.Cluster, error) {
 	key := buildCacheKey(resolution)
 
