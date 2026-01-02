@@ -27,6 +27,12 @@ type ClusterRepository interface {
 	// DeleteAllClusters は全てのクラスター結果を削除する
 	DeleteAllClusters(ctx context.Context) error
 
-	// AggregateByH3 は指定解像度でfieldsテーブルを集計する
+	// AggregateByH3 は指定解像度でfieldsテーブルを集計する(全範囲)
 	AggregateByH3(ctx context.Context, resolution entity.Resolution) ([]*AggregatedCluster, error)
+
+	// AggregateByH3ForCells は指定H3セルのみfieldsテーブルを集計する(差分更新用)
+	AggregateByH3ForCells(ctx context.Context, resolution entity.Resolution, h3Cells []string) ([]*AggregatedCluster, error)
+
+	// DeleteClustersByH3Indexes は指定H3インデックスのクラスター結果を削除する
+	DeleteClustersByH3Indexes(ctx context.Context, resolution entity.Resolution, h3Indexes []string) error
 }

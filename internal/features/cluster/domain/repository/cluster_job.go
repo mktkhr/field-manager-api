@@ -10,14 +10,20 @@ import (
 
 // ClusterJobRepository はクラスタージョブのリポジトリインターフェース
 type ClusterJobRepository interface {
-	// Create は新しいクラスタージョブを作成する
+	// Create は新しいクラスタージョブを作成する(全範囲再計算)
 	Create(ctx context.Context, job *entity.ClusterJob) error
+
+	// CreateWithAffectedCells は影響セル情報付きでクラスタージョブを作成する
+	CreateWithAffectedCells(ctx context.Context, job *entity.ClusterJob) error
 
 	// FindByID はIDでクラスタージョブを取得する
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.ClusterJob, error)
 
 	// FindPendingJobs は保留中のジョブを優先度順に取得する(排他ロック付き)
 	FindPendingJobs(ctx context.Context, limit int32) ([]*entity.ClusterJob, error)
+
+	// FindPendingJobsWithAffectedCells は影響セル情報付きで保留中のジョブを取得する
+	FindPendingJobsWithAffectedCells(ctx context.Context, limit int32) ([]*entity.ClusterJob, error)
 
 	// UpdateToProcessing はジョブを処理中に更新する
 	UpdateToProcessing(ctx context.Context, id uuid.UUID) error

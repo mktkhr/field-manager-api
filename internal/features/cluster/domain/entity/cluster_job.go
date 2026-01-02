@@ -34,16 +34,17 @@ func (s JobStatus) IsTerminal() bool {
 
 // ClusterJob はクラスタリングジョブのエンティティ
 type ClusterJob struct {
-	ID           uuid.UUID
-	Status       JobStatus
-	Priority     int32
-	CreatedAt    time.Time
-	StartedAt    *time.Time
-	CompletedAt  *time.Time
-	ErrorMessage string
+	ID              uuid.UUID
+	Status          JobStatus
+	Priority        int32
+	AffectedH3Cells []string // 影響を受けたH3セル(nil=全範囲再計算)
+	CreatedAt       time.Time
+	StartedAt       *time.Time
+	CompletedAt     *time.Time
+	ErrorMessage    string
 }
 
-// NewClusterJob は新しいClusterJobを作成する
+// NewClusterJob は新しいClusterJobを作成する(全範囲再計算)
 func NewClusterJob(priority int32) *ClusterJob {
 	now := time.Now()
 	return &ClusterJob{
@@ -52,6 +53,23 @@ func NewClusterJob(priority int32) *ClusterJob {
 		Priority:  priority,
 		CreatedAt: now,
 	}
+}
+
+// NewClusterJobWithAffectedCells は影響セル指定でClusterJobを作成する
+func NewClusterJobWithAffectedCells(priority int32, affectedCells []string) *ClusterJob {
+	now := time.Now()
+	return &ClusterJob{
+		ID:              uuid.New(),
+		Status:          JobStatusPending,
+		Priority:        priority,
+		AffectedH3Cells: affectedCells,
+		CreatedAt:       now,
+	}
+}
+
+// IsFullRecalculation は全範囲再計算かどうかを判定する
+func (j *ClusterJob) IsFullRecalculation() bool {
+	return len(j.AffectedH3Cells) == 0
 }
 
 // Start はジョブを処理中状態に遷移する
