@@ -96,8 +96,8 @@ func run(ctx context.Context, importJobID uuid.UUID, s3Key string, batchSize int
 	}()
 
 	// リポジトリ作成
-	importJobRepository := importRepo.NewImportJobRepository(pool)
-	fieldRepository := fieldRepo.NewFieldRepository(pool)
+	importJobRepository := importRepo.NewImportJobRepository(pool, logger)
+	fieldRepository := fieldRepo.NewFieldRepository(pool, logger)
 	clusterJobRepository := clusterRepo.NewClusterJobPostgresRepository(pool)
 
 	// クラスタージョブエンキューアー作成

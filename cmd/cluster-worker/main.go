@@ -70,8 +70,8 @@ func main() {
 	}()
 
 	// リポジトリ作成
-	clusterRepository := clusterRepo.NewClusterPostgresRepository(pool)
-	clusterCacheRepository := clusterRepo.NewClusterCacheRedisRepository(cacheClient)
+	clusterRepository := clusterRepo.NewClusterPostgresRepository(pool, slog.Default())
+	clusterCacheRepository := clusterRepo.NewClusterCacheRedisRepository(cacheClient, slog.Default())
 	clusterJobRepository := clusterRepo.NewClusterJobPostgresRepository(pool)
 
 	// ユースケース作成

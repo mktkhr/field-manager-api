@@ -27,8 +27,8 @@ func NewStrictServerHandler(
 	logger *slog.Logger,
 ) *StrictServerHandler {
 	// クラスター機能のDI
-	clusterRepository := clusterRepo.NewClusterPostgresRepository(pool)
-	clusterCacheRepository := clusterRepo.NewClusterCacheRedisRepository(cacheClient)
+	clusterRepository := clusterRepo.NewClusterPostgresRepository(pool, logger)
+	clusterCacheRepository := clusterRepo.NewClusterCacheRedisRepository(cacheClient, logger)
 	clusterJobRepository := clusterRepo.NewClusterJobPostgresRepository(pool)
 
 	getClustersUC := usecase.NewGetClustersUseCase(
