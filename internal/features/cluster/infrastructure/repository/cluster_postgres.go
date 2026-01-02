@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/repository"
-	"github.com/mktkhr/field-manager-api/internal/features/cluster/internal/h3util"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
 	"github.com/mktkhr/field-manager-api/internal/utils"
 )
@@ -66,6 +65,9 @@ func (r *clusterPostgresRepository) SaveClusters(ctx context.Context, clusters [
 		}
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("トランザクションコミットに失敗しました: %w", err)
+	}
 	return nil
 }
 

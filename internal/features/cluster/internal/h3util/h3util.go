@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/entity"
+	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/repository"
 	"github.com/uber/h3-go/v4"
 )
 
@@ -120,4 +121,34 @@ func CalculateCenterFromH3(h3Index string) (lat, lng float64, err error) {
 func IsValidH3Index(h3Index string) bool {
 	cell := h3.CellFromString(h3Index)
 	return cell.IsValid()
+}
+
+// ConvertAggregatedToClusters は集計結果をClusterエンティティに変換する
+func ConvertAggregatedToClusters(resolution entity.Resolution, aggregated []*repository.AggregatedCluster) ([]*entity.Cluster, error) {
+	clusters := make([]*entity.Cluster, 0, len(aggregated))
+	for _, agg := range aggregated {
+		lat, lng, err := CellToLatLng(agg.H3Index)
+		if err != nil {
+			// 無効なH3インデックスはスキップ
+			continue
+		}
+
+		clusters = append(clusters, entity.NewCluster(
+			resolution,
+			agg.H3Index,
+			agg.FieldCount,
+			lat,
+			lng,
+		))
+	}
+	return clusters, nil
+}
+
+// GetResolution はH3インデックスから解像度を取得する
+func GetResolution(h3Index string) int {
+	cell := h3.CellFromString(h3Index)
+	if !cell.IsValid() {
+		return -1
+	}
+	return cell.Resolution()
 }

@@ -1,4 +1,4 @@
-package repository
+package h3util
 
 import (
 	"testing"

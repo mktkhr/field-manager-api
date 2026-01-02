@@ -8,7 +8,7 @@ import (
 
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/repository"
-	infraRepo "github.com/mktkhr/field-manager-api/internal/features/cluster/infrastructure/repository"
+	"github.com/mktkhr/field-manager-api/internal/features/cluster/internal/h3util"
 )
 
 // CalculateClustersInput はクラスター計算ユースケースの入力
@@ -109,23 +109,20 @@ func (u *CalculateClustersUseCase) classifyH3CellsByResolution(cells []string) m
 }
 
 // detectResolution はH3インデックスから解像度を検出する
-// H3インデックスの長さから解像度を推定(簡易実装)
 func (u *CalculateClustersUseCase) detectResolution(h3Index string) entity.Resolution {
-	// H3インデックスの長さと解像度の対応:
-	// res3: 約8文字 (例: 831f8bff)
-	// res5: 約10文字 (例: 851f8b3ff)
-	// res7: 約12文字 (例: 871f8b3c7)
-	// res9: 約14文字 (例: 891f8b3c5af)
-	length := len(h3Index)
-	switch {
-	case length <= 9:
+	resolution := h3util.GetResolution(h3Index)
+	switch resolution {
+	case 3:
 		return entity.Res3
-	case length <= 11:
+	case 5:
 		return entity.Res5
-	case length <= 13:
+	case 7:
 		return entity.Res7
-	default:
+	case 9:
 		return entity.Res9
+	default:
+		// 無効なインデックスまたは未対応の解像度
+		return -1
 	}
 }
 
@@ -153,7 +150,7 @@ func (u *CalculateClustersUseCase) calculateForResolutionDifferential(ctx contex
 	}
 
 	// 3. 集計結果をClusterエンティティに変換
-	clusters, err := infraRepo.ConvertAggregatedToClusters(resolution, aggregated)
+	clusters, err := h3util.ConvertAggregatedToClusters(resolution, aggregated)
 	if err != nil {
 		return fmt.Errorf("変換に失敗しました: %w", err)
 	}
@@ -188,7 +185,7 @@ func (u *CalculateClustersUseCase) calculateForResolution(ctx context.Context, r
 	}
 
 	// 集計結果をClusterエンティティに変換
-	clusters, err := infraRepo.ConvertAggregatedToClusters(resolution, aggregated)
+	clusters, err := h3util.ConvertAggregatedToClusters(resolution, aggregated)
 	if err != nil {
 		return fmt.Errorf("変換に失敗しました: %w", err)
 	}
