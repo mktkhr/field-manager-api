@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/domain/entity"
@@ -113,12 +114,15 @@ func (r *clusterCacheRedisRepository) SetClusters(ctx context.Context, resolutio
 
 // DeleteClusters は全解像度のクラスター結果をキャッシュから削除する
 func (r *clusterCacheRedisRepository) DeleteClusters(ctx context.Context) error {
+	var lastErr error
 	for _, resolution := range entity.AllResolutions {
 		key := buildCacheKey(resolution)
 		if err := r.client.Delete(ctx, key); err != nil {
-			// 削除失敗はログに残すが、処理は継続する
-			continue
+			slog.Warn("キャッシュの削除に失敗しました",
+				slog.String("key", key),
+				slog.String("error", err.Error()))
+			lastErr = err
 		}
 	}
-	return nil
+	return lastErr
 }
