@@ -38,7 +38,12 @@ func NewStrictServerHandler(
 		logger,
 	)
 
-	clusterHdlr := clusterHandler.NewClusterHandler(getClustersUC, logger)
+	enqueueJobUC := usecase.NewEnqueueJobUseCase(
+		clusterJobRepository,
+		logger,
+	)
+
+	clusterHdlr := clusterHandler.NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
 	return &StrictServerHandler{
 		clusterHandler: clusterHdlr,
@@ -49,6 +54,11 @@ func NewStrictServerHandler(
 // GetClusters はクラスター一覧取得エンドポイント
 func (h *StrictServerHandler) GetClusters(ctx context.Context, request openapi.GetClustersRequestObject) (openapi.GetClustersResponseObject, error) {
 	return h.clusterHandler.GetClusters(ctx, request)
+}
+
+// RecalculateClusters はクラスター再計算リクエストエンドポイント
+func (h *StrictServerHandler) RecalculateClusters(ctx context.Context, request openapi.RecalculateClustersRequestObject) (openapi.RecalculateClustersResponseObject, error) {
+	return h.clusterHandler.RecalculateClusters(ctx, request)
 }
 
 // ListFields は圃場一覧取得エンドポイント(未実装)
