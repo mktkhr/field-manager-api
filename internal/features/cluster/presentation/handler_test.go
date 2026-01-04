@@ -188,8 +188,9 @@ func TestClusterHandler_GetClusters_Success(t *testing.T) {
 
 	resp200, ok := response.(openapi.GetClusters200JSONResponse)
 	require.True(t, ok, "200レスポンスを期待")
-	require.Len(t, resp200.Clusters, 1, "クラスター数が期待値と異なります")
-	require.False(t, resp200.IsStale, "IsStaleがtrueです")
+	require.NotNil(t, resp200.Data, "Dataがnilです")
+	require.Len(t, resp200.Data.Clusters, 1, "クラスター数が期待値と異なります")
+	require.False(t, resp200.Data.IsStale, "IsStaleがtrueです")
 }
 
 // TestClusterHandler_GetClusters_ValidationError_ZoomOutOfRange はzoomが範囲外の場合にエラーを返すことをテストする
@@ -415,7 +416,8 @@ func TestClusterHandler_GetClusters_IsStale(t *testing.T) {
 
 	resp200, ok := response.(openapi.GetClusters200JSONResponse)
 	require.True(t, ok, "200レスポンスを期待")
-	require.True(t, resp200.IsStale, "再計算中はIsStaleがtrueであるべき")
+	require.NotNil(t, resp200.Data, "Dataがnilです")
+	require.True(t, resp200.Data.IsStale, "再計算中はIsStaleがtrueであるべき")
 }
 
 // TestClusterHandler_GetClusters_EmptyClusters は空のクラスターでも正常に動作することをテストする
@@ -445,7 +447,8 @@ func TestClusterHandler_GetClusters_EmptyClusters(t *testing.T) {
 
 	resp200, ok := response.(openapi.GetClusters200JSONResponse)
 	require.True(t, ok, "200レスポンスを期待")
-	require.Len(t, resp200.Clusters, 0, "クラスター数は0であるべき")
+	require.NotNil(t, resp200.Data, "Dataがnilです")
+	require.Len(t, resp200.Data.Clusters, 0, "クラスター数は0であるべき")
 }
 
 // TestClusterHandler_GetClusters_BoundaryValues_Zoom はzoomの境界値を正しく処理することをテストする
@@ -619,7 +622,8 @@ func TestClusterHandler_RecalculateClusters_Success(t *testing.T) {
 
 	resp202, ok := response.(openapi.RecalculateClusters202JSONResponse)
 	require.True(t, ok, "202レスポンスを期待")
-	require.True(t, resp202.Enqueued, "Enqueuedがtrueであるべき")
+	require.NotNil(t, resp202.Data, "Dataがnilです")
+	require.True(t, resp202.Data.Enqueued, "Enqueuedがtrueであるべき")
 }
 
 // TestClusterHandler_RecalculateClusters_AlreadyRunning は既にジョブが実行中の場合に409を返すことをテストする
@@ -642,7 +646,9 @@ func TestClusterHandler_RecalculateClusters_AlreadyRunning(t *testing.T) {
 
 	resp409, ok := response.(openapi.RecalculateClusters409JSONResponse)
 	require.True(t, ok, "409レスポンスを期待")
-	require.Equal(t, "already_running", resp409.Code, "エラーコードがalready_runningであるべき")
+	require.NotNil(t, resp409.Errors, "Errorsがnilです")
+	require.Len(t, *resp409.Errors, 1, "エラー数が1であるべき")
+	require.Equal(t, "already_running", (*resp409.Errors)[0].Code, "エラーコードがalready_runningであるべき")
 }
 
 // TestClusterHandler_RecalculateClusters_Error はエンキューエラー時に500を返すことをテストする
@@ -668,5 +674,7 @@ func TestClusterHandler_RecalculateClusters_Error(t *testing.T) {
 
 	resp500, ok := response.(openapi.RecalculateClusters500JSONResponse)
 	require.True(t, ok, "500レスポンスを期待")
-	require.Equal(t, "internal_error", resp500.Code, "エラーコードがinternal_errorであるべき")
+	require.NotNil(t, resp500.Errors, "Errorsがnilです")
+	require.Len(t, *resp500.Errors, 1, "エラー数が1であるべき")
+	require.Equal(t, "internal_error", (*resp500.Errors)[0].Code, "エラーコードがinternal_errorであるべき")
 }
