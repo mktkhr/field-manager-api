@@ -1,0 +1,84 @@
+# クラスター関連スキーマ定義
+Cluster:
+  type: object
+  required:
+    - h3Index
+    - lat
+    - lng
+    - count
+  properties:
+    h3Index:
+      type: string
+      description: H3インデックス(16進数文字列)
+      example: "831f8dfffffffff"
+    lat:
+      type: number
+      format: double
+      description: クラスター中心の緯度
+    lng:
+      type: number
+      format: double
+      description: クラスター中心の経度
+    count:
+      type: integer
+      description: クラスターに含まれる圃場数
+
+ClusterListData:
+  type: object
+  required:
+    - clusters
+    - isStale
+  properties:
+    clusters:
+      type: array
+      items:
+        $ref: "./cluster.yaml#/Cluster"
+    isStale:
+      type: boolean
+      description: クラスターが再計算中かどうか
+
+ClusterListResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      allOf:
+        - $ref: "./cluster.yaml#/ClusterListData"
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "./common.yaml#/Error"
+
+RecalculateData:
+  type: object
+  required:
+    - message
+    - enqueued
+  properties:
+    message:
+      type: string
+      description: 処理結果メッセージ
+      example: "クラスター再計算ジョブをエンキューしました"
+    enqueued:
+      type: boolean
+      description: ジョブがエンキューされたかどうか
+
+RecalculateResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      allOf:
+        - $ref: "./cluster.yaml#/RecalculateData"
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "./common.yaml#/Error"

@@ -1,0 +1,63 @@
+# エラーレスポンス定義
+ErrorResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "../schemas/common.yaml#/Error"
+
+BadRequest:
+  description: リクエストパラメータが不正
+  content:
+    application/json:
+      schema:
+        $ref: "#/ErrorResponse"
+
+NotFound:
+  description: リソースが見つからない
+  content:
+    application/json:
+      schema:
+        $ref: "#/ErrorResponse"
+
+Conflict:
+  description: リソースの競合
+  content:
+    application/json:
+      schema:
+        $ref: "#/ErrorResponse"
+
+TooManyRequests:
+  description: リクエスト過多
+  content:
+    application/json:
+      schema:
+        $ref: "#/ErrorResponse"
+
+InternalServerError:
+  description: サーバーエラー
+  content:
+    application/json:
+      schema:
+        $ref: "#/ErrorResponse"
+
+NotImplemented:
+  description: 未実装
+  content:
+    application/json:
+      schema:
+        $ref: "#/ErrorResponse"
+
+ServiceUnavailable:
+  description: サービス利用不可
+  content:
+    application/json:
+      schema:
+        $ref: "#/ErrorResponse"

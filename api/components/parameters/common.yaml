@@ -1,0 +1,86 @@
+# 共通パラメータ定義
+Limit:
+  name: limit
+  in: query
+  schema:
+    type: integer
+    default: 20
+    maximum: 100
+
+Offset:
+  name: offset
+  in: query
+  schema:
+    type: integer
+    default: 0
+
+FieldId:
+  name: fieldId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+
+ImportId:
+  name: importId
+  in: path
+  required: true
+  schema:
+    type: string
+    format: uuid
+
+Zoom:
+  name: zoom
+  in: query
+  required: true
+  description: Google Mapsのズームレベル(1.0-22.0、少数対応)
+  schema:
+    type: number
+    format: double
+    minimum: 1.0
+    maximum: 22.0
+
+SwLat:
+  name: sw_lat
+  in: query
+  required: true
+  description: 南西端の緯度
+  schema:
+    type: number
+    format: double
+    minimum: -90
+    maximum: 90
+
+SwLng:
+  name: sw_lng
+  in: query
+  required: true
+  description: 南西端の経度
+  schema:
+    type: number
+    format: double
+    minimum: -180
+    maximum: 180
+
+NeLat:
+  name: ne_lat
+  in: query
+  required: true
+  description: 北東端の緯度
+  schema:
+    type: number
+    format: double
+    minimum: -90
+    maximum: 90
+
+NeLng:
+  name: ne_lng
+  in: query
+  required: true
+  description: 北東端の経度
+  schema:
+    type: number
+    format: double
+    minimum: -180
+    maximum: 180

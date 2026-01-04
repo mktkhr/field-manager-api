@@ -1,0 +1,72 @@
+# 圃場関連スキーマ定義
+Field:
+  type: object
+  required:
+    - id
+    - name
+    - createdAt
+    - updatedAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+      maxLength: 255
+    description:
+      type: string
+    areaHa:
+      type: number
+      format: double
+      description: 面積(ヘクタール)
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+FieldListData:
+  type: object
+  required:
+    - fields
+    - total
+  properties:
+    fields:
+      type: array
+      items:
+        $ref: "./field.yaml#/Field"
+    total:
+      type: integer
+
+FieldListResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      allOf:
+        - $ref: "./field.yaml#/FieldListData"
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "./common.yaml#/Error"
+
+FieldResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      allOf:
+        - $ref: "./field.yaml#/Field"
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "./common.yaml#/Error"

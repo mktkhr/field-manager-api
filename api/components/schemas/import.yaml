@@ -1,0 +1,105 @@
+# インポート関連スキーマ定義
+ImportRequest:
+  type: object
+  required:
+    - cityCode
+  properties:
+    cityCode:
+      type: string
+      description: 市区町村コード
+      example: "163210"
+
+ImportData:
+  type: object
+  required:
+    - importId
+  properties:
+    importId:
+      type: string
+      format: uuid
+      description: インポートジョブID
+    executionArn:
+      type: string
+      description: Step Functions実行ARN
+
+ImportResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      allOf:
+        - $ref: "./import.yaml#/ImportData"
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "./common.yaml#/Error"
+
+ImportStatusData:
+  type: object
+  required:
+    - id
+    - cityCode
+    - status
+    - processedRecords
+    - failedRecords
+    - progress
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    cityCode:
+      type: string
+    status:
+      type: string
+      enum:
+        - pending
+        - processing
+        - completed
+        - failed
+        - partially_completed
+    totalRecords:
+      type: integer
+      nullable: true
+    processedRecords:
+      type: integer
+    failedRecords:
+      type: integer
+    progress:
+      type: number
+      format: double
+      description: 進捗率(0-100)
+    errorMessage:
+      type: string
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    startedAt:
+      type: string
+      format: date-time
+      nullable: true
+    completedAt:
+      type: string
+      format: date-time
+      nullable: true
+
+ImportStatusResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      allOf:
+        - $ref: "./import.yaml#/ImportStatusData"
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "./common.yaml#/Error"
