@@ -1,0 +1,59 @@
+# インポートエンドポイント
+imports:
+  post:
+    tags:
+      - imports
+    summary: インポートリクエスト
+    description: wagri APIからのデータインポートをリクエストする
+    operationId: requestImport
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/import.yaml#/ImportRequest"
+    responses:
+      "202":
+        description: インポートリクエスト受付
+        headers:
+          Location:
+            description: インポートステータス確認用URL
+            schema:
+              type: string
+              format: uri
+              example: /api/v1/imports/123e4567-e89b-12d3-a456-426614174000
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/import.yaml#/ImportResponse"
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+      "501":
+        $ref: "../components/responses/errors.yaml#/NotImplemented"
+
+import:
+  get:
+    tags:
+      - imports
+    summary: インポートステータス取得
+    description: インポートジョブのステータスを取得する
+    operationId: getImportStatus
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/ImportId"
+    responses:
+      "200":
+        description: インポートステータス
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/import.yaml#/ImportStatusResponse"
+      "404":
+        $ref: "../components/responses/errors.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+      "501":
+        $ref: "../components/responses/errors.yaml#/NotImplemented"

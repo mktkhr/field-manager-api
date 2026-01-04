@@ -1,0 +1,47 @@
+# 圃場エンドポイント
+fields:
+  get:
+    tags:
+      - fields
+    summary: 圃場一覧取得
+    operationId: listFields
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/Limit"
+      - $ref: "../components/parameters/common.yaml#/Offset"
+    responses:
+      "200":
+        description: 圃場一覧
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/field.yaml#/FieldListResponse"
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+      "501":
+        $ref: "../components/responses/errors.yaml#/NotImplemented"
+
+field:
+  get:
+    tags:
+      - fields
+    summary: 圃場詳細取得
+    operationId: getField
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/FieldId"
+    responses:
+      "200":
+        description: 圃場詳細
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/field.yaml#/FieldResponse"
+      "404":
+        $ref: "../components/responses/errors.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+      "501":
+        $ref: "../components/responses/errors.yaml#/NotImplemented"
