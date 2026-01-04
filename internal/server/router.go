@@ -63,33 +63,53 @@ func (h *StrictServerHandler) RecalculateClusters(ctx context.Context, request o
 
 // ListFields は圃場一覧取得エンドポイント(未実装)
 func (h *StrictServerHandler) ListFields(_ context.Context, _ openapi.ListFieldsRequestObject) (openapi.ListFieldsResponseObject, error) {
-	return openapi.ListFields500JSONResponse{
-		Code:    "not_implemented",
-		Message: "未実装",
+	return openapi.ListFields501JSONResponse{
+		NotImplementedJSONResponse: openapi.NotImplementedJSONResponse{
+			Data: nil,
+			Errors: &[]openapi.Error{{
+				Code:    "not_implemented",
+				Message: "このエンドポイントは未実装です",
+			}},
+		},
 	}, nil
 }
 
 // GetField は圃場詳細取得エンドポイント(未実装)
 func (h *StrictServerHandler) GetField(_ context.Context, _ openapi.GetFieldRequestObject) (openapi.GetFieldResponseObject, error) {
-	return openapi.GetField500JSONResponse{
-		Code:    "not_implemented",
-		Message: "未実装",
+	return openapi.GetField501JSONResponse{
+		NotImplementedJSONResponse: openapi.NotImplementedJSONResponse{
+			Data: nil,
+			Errors: &[]openapi.Error{{
+				Code:    "not_implemented",
+				Message: "このエンドポイントは未実装です",
+			}},
+		},
 	}, nil
 }
 
 // RequestImport はインポートリクエストエンドポイント(未実装)
 func (h *StrictServerHandler) RequestImport(_ context.Context, _ openapi.RequestImportRequestObject) (openapi.RequestImportResponseObject, error) {
-	return openapi.RequestImport500JSONResponse{
-		Code:    "not_implemented",
-		Message: "未実装",
+	return openapi.RequestImport501JSONResponse{
+		NotImplementedJSONResponse: openapi.NotImplementedJSONResponse{
+			Data: nil,
+			Errors: &[]openapi.Error{{
+				Code:    "not_implemented",
+				Message: "このエンドポイントは未実装です",
+			}},
+		},
 	}, nil
 }
 
 // GetImportStatus はインポートステータス取得エンドポイント(未実装)
 func (h *StrictServerHandler) GetImportStatus(_ context.Context, _ openapi.GetImportStatusRequestObject) (openapi.GetImportStatusResponseObject, error) {
-	return openapi.GetImportStatus500JSONResponse{
-		Code:    "not_implemented",
-		Message: "未実装",
+	return openapi.GetImportStatus501JSONResponse{
+		NotImplementedJSONResponse: openapi.NotImplementedJSONResponse{
+			Data: nil,
+			Errors: &[]openapi.Error{{
+				Code:    "not_implemented",
+				Message: "このエンドポイントは未実装です",
+			}},
+		},
 	}, nil
 }
 
