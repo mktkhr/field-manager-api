@@ -9,13 +9,13 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for ImportStatusStatus.
+// Defines values for ImportStatusDataStatus.
 const (
-	Completed          ImportStatusStatus = "completed"
-	Failed             ImportStatusStatus = "failed"
-	PartiallyCompleted ImportStatusStatus = "partially_completed"
-	Pending            ImportStatusStatus = "pending"
-	Processing         ImportStatusStatus = "processing"
+	Completed          ImportStatusDataStatus = "completed"
+	Failed             ImportStatusDataStatus = "failed"
+	PartiallyCompleted ImportStatusDataStatus = "partially_completed"
+	Pending            ImportStatusDataStatus = "pending"
+	Processing         ImportStatusDataStatus = "processing"
 )
 
 // Cluster defines model for Cluster.
@@ -33,18 +33,30 @@ type Cluster struct {
 	Lng float64 `json:"lng"`
 }
 
-// ClusterListResponse defines model for ClusterListResponse.
-type ClusterListResponse struct {
+// ClusterListData defines model for ClusterListData.
+type ClusterListData struct {
 	Clusters []Cluster `json:"clusters"`
 
 	// IsStale クラスターが再計算中かどうか
 	IsStale bool `json:"isStale"`
 }
 
-// ErrorResponse defines model for ErrorResponse.
-type ErrorResponse struct {
+// ClusterListResponse defines model for ClusterListResponse.
+type ClusterListResponse struct {
+	Data   *ClusterListData `json:"data"`
+	Errors *[]Error         `json:"errors"`
+}
+
+// Error defines model for Error.
+type Error struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+}
+
+// ErrorResponse defines model for ErrorResponse.
+type ErrorResponse struct {
+	Data   interface{} `json:"data"`
+	Errors *[]Error    `json:"errors"`
 }
 
 // Field defines model for Field.
@@ -58,15 +70,36 @@ type Field struct {
 	UpdatedAt   time.Time          `json:"updatedAt"`
 }
 
-// FieldListResponse defines model for FieldListResponse.
-type FieldListResponse struct {
+// FieldListData defines model for FieldListData.
+type FieldListData struct {
 	Fields []Field `json:"fields"`
 	Total  int     `json:"total"`
+}
+
+// FieldListResponse defines model for FieldListResponse.
+type FieldListResponse struct {
+	Data   *FieldListData `json:"data"`
+	Errors *[]Error       `json:"errors"`
+}
+
+// FieldResponse defines model for FieldResponse.
+type FieldResponse struct {
+	Data   *Field   `json:"data"`
+	Errors *[]Error `json:"errors"`
 }
 
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	Status string `json:"status"`
+}
+
+// ImportData defines model for ImportData.
+type ImportData struct {
+	// ExecutionArn Step Functions実行ARN
+	ExecutionArn *string `json:"executionArn,omitempty"`
+
+	// ImportId インポートジョブID
+	ImportId openapi_types.UUID `json:"importId"`
 }
 
 // ImportRequest defines model for ImportRequest.
@@ -77,15 +110,12 @@ type ImportRequest struct {
 
 // ImportResponse defines model for ImportResponse.
 type ImportResponse struct {
-	// ExecutionArn Step Functions実行ARN
-	ExecutionArn *string `json:"executionArn,omitempty"`
-
-	// ImportId インポートジョブID
-	ImportId openapi_types.UUID `json:"importId"`
+	Data   *ImportData `json:"data"`
+	Errors *[]Error    `json:"errors"`
 }
 
-// ImportStatus defines model for ImportStatus.
-type ImportStatus struct {
+// ImportStatusData defines model for ImportStatusData.
+type ImportStatusData struct {
 	CityCode         string             `json:"cityCode"`
 	CompletedAt      *time.Time         `json:"completedAt"`
 	CreatedAt        time.Time          `json:"createdAt"`
@@ -95,17 +125,23 @@ type ImportStatus struct {
 	ProcessedRecords int                `json:"processedRecords"`
 
 	// Progress 進捗率(0-100)
-	Progress     float64            `json:"progress"`
-	StartedAt    *time.Time         `json:"startedAt"`
-	Status       ImportStatusStatus `json:"status"`
-	TotalRecords *int               `json:"totalRecords"`
+	Progress     float64                `json:"progress"`
+	StartedAt    *time.Time             `json:"startedAt"`
+	Status       ImportStatusDataStatus `json:"status"`
+	TotalRecords *int                   `json:"totalRecords"`
 }
 
-// ImportStatusStatus defines model for ImportStatus.Status.
-type ImportStatusStatus string
+// ImportStatusDataStatus defines model for ImportStatusData.Status.
+type ImportStatusDataStatus string
 
-// RecalculateResponse defines model for RecalculateResponse.
-type RecalculateResponse struct {
+// ImportStatusResponse defines model for ImportStatusResponse.
+type ImportStatusResponse struct {
+	Data   *ImportStatusData `json:"data"`
+	Errors *[]Error          `json:"errors"`
+}
+
+// RecalculateData defines model for RecalculateData.
+type RecalculateData struct {
 	// Enqueued ジョブがエンキューされたかどうか
 	Enqueued bool `json:"enqueued"`
 
@@ -113,28 +149,82 @@ type RecalculateResponse struct {
 	Message string `json:"message"`
 }
 
+// RecalculateResponse defines model for RecalculateResponse.
+type RecalculateResponse struct {
+	Data   *RecalculateData `json:"data"`
+	Errors *[]Error         `json:"errors"`
+}
+
+// FieldId defines model for FieldId.
+type FieldId = openapi_types.UUID
+
+// ImportId defines model for ImportId.
+type ImportId = openapi_types.UUID
+
+// Limit defines model for Limit.
+type Limit = int
+
+// NeLat defines model for NeLat.
+type NeLat = float64
+
+// NeLng defines model for NeLng.
+type NeLng = float64
+
+// Offset defines model for Offset.
+type Offset = int
+
+// SwLat defines model for SwLat.
+type SwLat = float64
+
+// SwLng defines model for SwLng.
+type SwLng = float64
+
+// Zoom defines model for Zoom.
+type Zoom = float64
+
+// BadRequest defines model for BadRequest.
+type BadRequest = ErrorResponse
+
+// Conflict defines model for Conflict.
+type Conflict = ErrorResponse
+
+// InternalServerError defines model for InternalServerError.
+type InternalServerError = ErrorResponse
+
+// NotFound defines model for NotFound.
+type NotFound = ErrorResponse
+
+// NotImplemented defines model for NotImplemented.
+type NotImplemented = ErrorResponse
+
+// ServiceUnavailable defines model for ServiceUnavailable.
+type ServiceUnavailable = ErrorResponse
+
+// TooManyRequests defines model for TooManyRequests.
+type TooManyRequests = ErrorResponse
+
 // GetClustersParams defines parameters for GetClusters.
 type GetClustersParams struct {
 	// Zoom Google Mapsのズームレベル(1.0-22.0、少数対応)
-	Zoom float64 `form:"zoom" json:"zoom"`
+	Zoom Zoom `form:"zoom" json:"zoom"`
 
 	// SwLat 南西端の緯度
-	SwLat float64 `form:"sw_lat" json:"sw_lat"`
+	SwLat SwLat `form:"sw_lat" json:"sw_lat"`
 
 	// SwLng 南西端の経度
-	SwLng float64 `form:"sw_lng" json:"sw_lng"`
+	SwLng SwLng `form:"sw_lng" json:"sw_lng"`
 
 	// NeLat 北東端の緯度
-	NeLat float64 `form:"ne_lat" json:"ne_lat"`
+	NeLat NeLat `form:"ne_lat" json:"ne_lat"`
 
 	// NeLng 北東端の経度
-	NeLng float64 `form:"ne_lng" json:"ne_lng"`
+	NeLng NeLng `form:"ne_lng" json:"ne_lng"`
 }
 
 // ListFieldsParams defines parameters for ListFields.
 type ListFieldsParams struct {
-	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+	Limit  *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // RequestImportJSONRequestBody defines body for RequestImport for application/json ContentType.

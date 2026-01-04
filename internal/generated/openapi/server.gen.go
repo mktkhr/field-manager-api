@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/oapi-codegen/runtime"
 	strictgin "github.com/oapi-codegen/runtime/strictmiddleware/gin"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // ServerInterface represents all server handlers.
@@ -28,13 +27,13 @@ type ServerInterface interface {
 	ListFields(c *gin.Context, params ListFieldsParams)
 	// 圃場詳細取得
 	// (GET /api/v1/fields/{fieldId})
-	GetField(c *gin.Context, fieldId openapi_types.UUID)
+	GetField(c *gin.Context, fieldId FieldId)
 	// インポートリクエスト
 	// (POST /api/v1/imports)
 	RequestImport(c *gin.Context)
 	// インポートステータス取得
 	// (GET /api/v1/imports/{importId})
-	GetImportStatus(c *gin.Context, importId openapi_types.UUID)
+	GetImportStatus(c *gin.Context, importId ImportId)
 	// ヘルスチェック
 	// (GET /health)
 	HealthCheck(c *gin.Context)
@@ -195,7 +194,7 @@ func (siw *ServerInterfaceWrapper) GetField(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "fieldId" -------------
-	var fieldId openapi_types.UUID
+	var fieldId FieldId
 
 	err = runtime.BindStyledParameterWithOptions("simple", "fieldId", c.Param("fieldId"), &fieldId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
@@ -232,7 +231,7 @@ func (siw *ServerInterfaceWrapper) GetImportStatus(c *gin.Context) {
 	var err error
 
 	// ------------- Path parameter "importId" -------------
-	var importId openapi_types.UUID
+	var importId ImportId
 
 	err = runtime.BindStyledParameterWithOptions("simple", "importId", c.Param("importId"), &importId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
 	if err != nil {
@@ -299,6 +298,20 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/health", wrapper.HealthCheck)
 }
 
+type BadRequestJSONResponse ErrorResponse
+
+type ConflictJSONResponse ErrorResponse
+
+type InternalServerErrorJSONResponse ErrorResponse
+
+type NotFoundJSONResponse ErrorResponse
+
+type NotImplementedJSONResponse ErrorResponse
+
+type ServiceUnavailableJSONResponse ErrorResponse
+
+type TooManyRequestsJSONResponse ErrorResponse
+
 type GetClustersRequestObject struct {
 	Params GetClustersParams
 }
@@ -316,7 +329,7 @@ func (response GetClusters200JSONResponse) VisitGetClustersResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetClusters400JSONResponse ErrorResponse
+type GetClusters400JSONResponse struct{ BadRequestJSONResponse }
 
 func (response GetClusters400JSONResponse) VisitGetClustersResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -325,7 +338,9 @@ func (response GetClusters400JSONResponse) VisitGetClustersResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetClusters500JSONResponse ErrorResponse
+type GetClusters500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
 
 func (response GetClusters500JSONResponse) VisitGetClustersResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -350,7 +365,7 @@ func (response RecalculateClusters202JSONResponse) VisitRecalculateClustersRespo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type RecalculateClusters409JSONResponse ErrorResponse
+type RecalculateClusters409JSONResponse struct{ ConflictJSONResponse }
 
 func (response RecalculateClusters409JSONResponse) VisitRecalculateClustersResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -359,7 +374,9 @@ func (response RecalculateClusters409JSONResponse) VisitRecalculateClustersRespo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type RecalculateClusters500JSONResponse ErrorResponse
+type RecalculateClusters500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
 
 func (response RecalculateClusters500JSONResponse) VisitRecalculateClustersResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -385,7 +402,7 @@ func (response ListFields200JSONResponse) VisitListFieldsResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListFields400JSONResponse ErrorResponse
+type ListFields400JSONResponse struct{ BadRequestJSONResponse }
 
 func (response ListFields400JSONResponse) VisitListFieldsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -394,7 +411,9 @@ func (response ListFields400JSONResponse) VisitListFieldsResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
-type ListFields500JSONResponse ErrorResponse
+type ListFields500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
 
 func (response ListFields500JSONResponse) VisitListFieldsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -403,15 +422,24 @@ func (response ListFields500JSONResponse) VisitListFieldsResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListFields501JSONResponse struct{ NotImplementedJSONResponse }
+
+func (response ListFields501JSONResponse) VisitListFieldsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetFieldRequestObject struct {
-	FieldId openapi_types.UUID `json:"fieldId"`
+	FieldId FieldId `json:"fieldId"`
 }
 
 type GetFieldResponseObject interface {
 	VisitGetFieldResponse(w http.ResponseWriter) error
 }
 
-type GetField200JSONResponse Field
+type GetField200JSONResponse FieldResponse
 
 func (response GetField200JSONResponse) VisitGetFieldResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -420,7 +448,7 @@ func (response GetField200JSONResponse) VisitGetFieldResponse(w http.ResponseWri
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetField404JSONResponse ErrorResponse
+type GetField404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response GetField404JSONResponse) VisitGetFieldResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -429,11 +457,22 @@ func (response GetField404JSONResponse) VisitGetFieldResponse(w http.ResponseWri
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetField500JSONResponse ErrorResponse
+type GetField500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
 
 func (response GetField500JSONResponse) VisitGetFieldResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetField501JSONResponse struct{ NotImplementedJSONResponse }
+
+func (response GetField501JSONResponse) VisitGetFieldResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(501)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -446,16 +485,24 @@ type RequestImportResponseObject interface {
 	VisitRequestImportResponse(w http.ResponseWriter) error
 }
 
-type RequestImport202JSONResponse ImportResponse
+type RequestImport202ResponseHeaders struct {
+	Location string
+}
+
+type RequestImport202JSONResponse struct {
+	Body    ImportResponse
+	Headers RequestImport202ResponseHeaders
+}
 
 func (response RequestImport202JSONResponse) VisitRequestImportResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Location", fmt.Sprint(response.Headers.Location))
 	w.WriteHeader(202)
 
-	return json.NewEncoder(w).Encode(response)
+	return json.NewEncoder(w).Encode(response.Body)
 }
 
-type RequestImport400JSONResponse ErrorResponse
+type RequestImport400JSONResponse struct{ BadRequestJSONResponse }
 
 func (response RequestImport400JSONResponse) VisitRequestImportResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -464,7 +511,9 @@ func (response RequestImport400JSONResponse) VisitRequestImportResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
-type RequestImport500JSONResponse ErrorResponse
+type RequestImport500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
 
 func (response RequestImport500JSONResponse) VisitRequestImportResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -473,15 +522,24 @@ func (response RequestImport500JSONResponse) VisitRequestImportResponse(w http.R
 	return json.NewEncoder(w).Encode(response)
 }
 
+type RequestImport501JSONResponse struct{ NotImplementedJSONResponse }
+
+func (response RequestImport501JSONResponse) VisitRequestImportResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(501)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetImportStatusRequestObject struct {
-	ImportId openapi_types.UUID `json:"importId"`
+	ImportId ImportId `json:"importId"`
 }
 
 type GetImportStatusResponseObject interface {
 	VisitGetImportStatusResponse(w http.ResponseWriter) error
 }
 
-type GetImportStatus200JSONResponse ImportStatus
+type GetImportStatus200JSONResponse ImportStatusResponse
 
 func (response GetImportStatus200JSONResponse) VisitGetImportStatusResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -490,7 +548,7 @@ func (response GetImportStatus200JSONResponse) VisitGetImportStatusResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetImportStatus404JSONResponse ErrorResponse
+type GetImportStatus404JSONResponse struct{ NotFoundJSONResponse }
 
 func (response GetImportStatus404JSONResponse) VisitGetImportStatusResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -499,11 +557,22 @@ func (response GetImportStatus404JSONResponse) VisitGetImportStatusResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
-type GetImportStatus500JSONResponse ErrorResponse
+type GetImportStatus500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
 
 func (response GetImportStatus500JSONResponse) VisitGetImportStatusResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetImportStatus501JSONResponse struct{ NotImplementedJSONResponse }
+
+func (response GetImportStatus501JSONResponse) VisitGetImportStatusResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(501)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -524,7 +593,7 @@ func (response HealthCheck200JSONResponse) VisitHealthCheckResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type HealthCheck429JSONResponse ErrorResponse
+type HealthCheck429JSONResponse struct{ TooManyRequestsJSONResponse }
 
 func (response HealthCheck429JSONResponse) VisitHealthCheckResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -533,7 +602,7 @@ func (response HealthCheck429JSONResponse) VisitHealthCheckResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
-type HealthCheck503JSONResponse ErrorResponse
+type HealthCheck503JSONResponse struct{ ServiceUnavailableJSONResponse }
 
 func (response HealthCheck503JSONResponse) VisitHealthCheckResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -659,7 +728,7 @@ func (sh *strictHandler) ListFields(ctx *gin.Context, params ListFieldsParams) {
 }
 
 // GetField operation middleware
-func (sh *strictHandler) GetField(ctx *gin.Context, fieldId openapi_types.UUID) {
+func (sh *strictHandler) GetField(ctx *gin.Context, fieldId FieldId) {
 	var request GetFieldRequestObject
 
 	request.FieldId = fieldId
@@ -719,7 +788,7 @@ func (sh *strictHandler) RequestImport(ctx *gin.Context) {
 }
 
 // GetImportStatus operation middleware
-func (sh *strictHandler) GetImportStatus(ctx *gin.Context, importId openapi_types.UUID) {
+func (sh *strictHandler) GetImportStatus(ctx *gin.Context, importId ImportId) {
 	var request GetImportStatusRequestObject
 
 	request.ImportId = importId
