@@ -10,6 +10,9 @@ import (
 	"github.com/mktkhr/field-manager-api/internal/features/cluster/application/usecase"
 	clusterRepo "github.com/mktkhr/field-manager-api/internal/features/cluster/infrastructure/repository"
 	clusterHandler "github.com/mktkhr/field-manager-api/internal/features/cluster/presentation"
+	fieldUsecase "github.com/mktkhr/field-manager-api/internal/features/field/application/usecase"
+	fieldQuery "github.com/mktkhr/field-manager-api/internal/features/field/infrastructure/query"
+	fieldHandler "github.com/mktkhr/field-manager-api/internal/features/field/presentation"
 	"github.com/mktkhr/field-manager-api/internal/generated/openapi"
 	"github.com/mktkhr/field-manager-api/internal/infrastructure/cache"
 )
@@ -17,6 +20,7 @@ import (
 // StrictServerHandler はStrictServerInterfaceを実装する
 type StrictServerHandler struct {
 	clusterHandler *clusterHandler.ClusterHandler
+	fieldHandler   *fieldHandler.FieldHandler
 	logger         *slog.Logger
 }
 
@@ -45,8 +49,14 @@ func NewStrictServerHandler(
 
 	clusterHdlr := clusterHandler.NewClusterHandler(getClustersUC, enqueueJobUC, logger)
 
+	// 圃場機能のDI
+	fieldQueryImpl := fieldQuery.NewFieldQuery(pool)
+	listFieldsUC := fieldUsecase.NewListFieldsUseCase(fieldQueryImpl, logger)
+	fieldHdlr := fieldHandler.NewFieldHandler(listFieldsUC, logger)
+
 	return &StrictServerHandler{
 		clusterHandler: clusterHdlr,
+		fieldHandler:   fieldHdlr,
 		logger:         logger,
 	}
 }
@@ -61,17 +71,9 @@ func (h *StrictServerHandler) RecalculateClusters(ctx context.Context, request o
 	return h.clusterHandler.RecalculateClusters(ctx, request)
 }
 
-// ListFields は圃場一覧取得エンドポイント(未実装)
-func (h *StrictServerHandler) ListFields(_ context.Context, _ openapi.ListFieldsRequestObject) (openapi.ListFieldsResponseObject, error) {
-	return openapi.ListFields501JSONResponse{
-		NotImplementedJSONResponse: openapi.NotImplementedJSONResponse{
-			Data: nil,
-			Errors: &[]openapi.Error{{
-				Code:    "not_implemented",
-				Message: "このエンドポイントは未実装です",
-			}},
-		},
-	}, nil
+// ListFields は圃場一覧取得エンドポイント
+func (h *StrictServerHandler) ListFields(ctx context.Context, request openapi.ListFieldsRequestObject) (openapi.ListFieldsResponseObject, error) {
+	return h.fieldHandler.ListFields(ctx, request)
 }
 
 // GetField は圃場詳細取得エンドポイント(未実装)
