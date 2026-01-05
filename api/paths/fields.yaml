@@ -7,8 +7,8 @@ fields:
     operationId: listFields
     security: []
     parameters:
-      - $ref: "../components/parameters/common.yaml#/Limit"
-      - $ref: "../components/parameters/common.yaml#/Offset"
+      - $ref: "../components/parameters/common.yaml#/Page"
+      - $ref: "../components/parameters/common.yaml#/PageSize"
     responses:
       "200":
         description: 圃場一覧
@@ -20,8 +20,6 @@ fields:
         $ref: "../components/responses/errors.yaml#/BadRequest"
       "500":
         $ref: "../components/responses/errors.yaml#/InternalServerError"
-      "501":
-        $ref: "../components/responses/errors.yaml#/NotImplemented"
 
 field:
   get:

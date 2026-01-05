@@ -1,11 +1,60 @@
 # 圃場関連スキーマ定義
+
+# 座標オブジェクト
+Coordinate:
+  type: object
+  required:
+    - lat
+    - lng
+  properties:
+    lat:
+      type: number
+      format: double
+      description: 緯度
+    lng:
+      type: number
+      format: double
+      description: 経度
+
+# ページネーションメタ情報
+PaginationMeta:
+  type: object
+  required:
+    - total
+    - page
+    - pageSize
+    - totalPages
+  properties:
+    total:
+      type: integer
+      description: 総件数
+    page:
+      type: integer
+      description: 現在のページ番号
+    pageSize:
+      type: integer
+      description: 1ページあたりの件数
+    totalPages:
+      type: integer
+      description: 総ページ数
+
+# レスポンスメタ情報
+ResponseMeta:
+  type: object
+  required:
+    - pagination
+  properties:
+    pagination:
+      $ref: "./field.yaml#/PaginationMeta"
+
 Field:
   type: object
   required:
     - id
     - name
-    - createdAt
-    - updatedAt
+    - cityCode
+    - geometry
+    - centroid
   properties:
     id:
       type: string
@@ -13,41 +62,53 @@ Field:
     name:
       type: string
       maxLength: 255
-    description:
+      description: 圃場名
+    cityCode:
       type: string
-    areaHa:
+      description: 市区町村コード
+    soilTypeId:
+      type: string
+      format: uuid
+      nullable: true
+      description: 土壌タイプID
+    areaSqm:
       type: number
       format: double
-      description: 面積(ヘクタール)
-    createdAt:
-      type: string
-      format: date-time
-    updatedAt:
-      type: string
-      format: date-time
+      nullable: true
+      description: 面積(平方メートル)
+    geometry:
+      type: array
+      items:
+        $ref: "./field.yaml#/Coordinate"
+      description: ポリゴンの頂点座標配列
+    centroid:
+      $ref: "./field.yaml#/Coordinate"
+      description: 重心座標
 
 FieldListData:
   type: object
   required:
     - fields
-    - total
   properties:
     fields:
       type: array
       items:
         $ref: "./field.yaml#/Field"
-    total:
-      type: integer
 
 FieldListResponse:
   type: object
   required:
     - data
+    - meta
     - errors
   properties:
     data:
       allOf:
         - $ref: "./field.yaml#/FieldListData"
+      nullable: true
+    meta:
+      allOf:
+        - $ref: "./field.yaml#/ResponseMeta"
       nullable: true
     errors:
       type: array
