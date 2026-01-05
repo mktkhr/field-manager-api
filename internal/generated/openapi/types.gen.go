@@ -47,6 +47,15 @@ type ClusterListResponse struct {
 	Errors *[]Error         `json:"errors"`
 }
 
+// Coordinate defines model for Coordinate.
+type Coordinate struct {
+	// Lat 緯度
+	Lat float64 `json:"lat"`
+
+	// Lng 経度
+	Lng float64 `json:"lng"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Code    string `json:"code"`
@@ -61,25 +70,34 @@ type ErrorResponse struct {
 
 // Field defines model for Field.
 type Field struct {
-	// AreaHa 面積(ヘクタール)
-	AreaHa      *float64           `json:"areaHa,omitempty"`
-	CreatedAt   time.Time          `json:"createdAt"`
-	Description *string            `json:"description,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
-	UpdatedAt   time.Time          `json:"updatedAt"`
+	// AreaSqm 面積(平方メートル)
+	AreaSqm  *float64   `json:"areaSqm"`
+	Centroid Coordinate `json:"centroid"`
+
+	// CityCode 市区町村コード
+	CityCode string `json:"cityCode"`
+
+	// Geometry ポリゴンの頂点座標配列
+	Geometry []Coordinate       `json:"geometry"`
+	Id       openapi_types.UUID `json:"id"`
+
+	// Name 圃場名
+	Name string `json:"name"`
+
+	// SoilTypeId 土壌タイプID
+	SoilTypeId *openapi_types.UUID `json:"soilTypeId"`
 }
 
 // FieldListData defines model for FieldListData.
 type FieldListData struct {
 	Fields []Field `json:"fields"`
-	Total  int     `json:"total"`
 }
 
 // FieldListResponse defines model for FieldListResponse.
 type FieldListResponse struct {
 	Data   *FieldListData `json:"data"`
 	Errors *[]Error       `json:"errors"`
+	Meta   *ResponseMeta  `json:"meta"`
 }
 
 // FieldResponse defines model for FieldResponse.
@@ -140,6 +158,21 @@ type ImportStatusResponse struct {
 	Errors *[]Error          `json:"errors"`
 }
 
+// PaginationMeta defines model for PaginationMeta.
+type PaginationMeta struct {
+	// Page 現在のページ番号
+	Page int `json:"page"`
+
+	// PageSize 1ページあたりの件数
+	PageSize int `json:"pageSize"`
+
+	// Total 総件数
+	Total int `json:"total"`
+
+	// TotalPages 総ページ数
+	TotalPages int `json:"totalPages"`
+}
+
 // RecalculateData defines model for RecalculateData.
 type RecalculateData struct {
 	// Enqueued ジョブがエンキューされたかどうか
@@ -155,14 +188,16 @@ type RecalculateResponse struct {
 	Errors *[]Error         `json:"errors"`
 }
 
+// ResponseMeta defines model for ResponseMeta.
+type ResponseMeta struct {
+	Pagination PaginationMeta `json:"pagination"`
+}
+
 // FieldId defines model for FieldId.
 type FieldId = openapi_types.UUID
 
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
-
-// Limit defines model for Limit.
-type Limit = int
 
 // NeLat defines model for NeLat.
 type NeLat = float64
@@ -170,8 +205,11 @@ type NeLat = float64
 // NeLng defines model for NeLng.
 type NeLng = float64
 
-// Offset defines model for Offset.
-type Offset = int
+// Page defines model for Page.
+type Page = int
+
+// PageSize defines model for PageSize.
+type PageSize = int
 
 // SwLat defines model for SwLat.
 type SwLat = float64
@@ -223,8 +261,11 @@ type GetClustersParams struct {
 
 // ListFieldsParams defines parameters for ListFields.
 type ListFieldsParams struct {
-	Limit  *Limit  `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty"`
+	// Page ページ番号(1始まり)
+	Page Page `form:"page" json:"page"`
+
+	// PageSize 1ページあたりの件数
+	PageSize *PageSize `form:"pageSize,omitempty" json:"pageSize,omitempty"`
 }
 
 // RequestImportJSONRequestBody defines body for RequestImport for application/json ContentType.
