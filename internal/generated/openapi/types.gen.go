@@ -76,8 +76,8 @@ type Error struct {
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
-	Data   interface{} `json:"data"`
-	Errors *[]Error    `json:"errors"`
+	Data   *map[string]interface{} `json:"data"`
+	Errors *[]Error                `json:"errors"`
 }
 
 // Field defines model for Field.
