@@ -7,7 +7,7 @@ fields:
     operationId: listFields
     security: []
     parameters:
-      - $ref: "../components/parameters/common.yaml#/Page"
+      - $ref: "../components/parameters/common.yaml#/Cursor"
       - $ref: "../components/parameters/common.yaml#/PageSize"
     responses:
       "200":

@@ -16,27 +16,23 @@ Coordinate:
       format: double
       description: 経度
 
-# ページネーションメタ情報
-PaginationMeta:
+# カーソルベースページネーションメタ情報
+CursorPaginationMeta:
   type: object
   required:
-    - total
-    - page
+    - hasMore
     - pageSize
-    - totalPages
   properties:
-    total:
-      type: integer
-      description: 総件数
-    page:
-      type: integer
-      description: 現在のページ番号
+    nextCursor:
+      type: string
+      nullable: true
+      description: 次ページ取得用カーソル(最終ページの場合はnull)
+    hasMore:
+      type: boolean
+      description: 次ページが存在するか
     pageSize:
       type: integer
       description: 1ページあたりの件数
-    totalPages:
-      type: integer
-      description: 総ページ数
 
 # レスポンスメタ情報
 ResponseMeta:
@@ -45,7 +41,7 @@ ResponseMeta:
     - pagination
   properties:
     pagination:
-      $ref: "./field.yaml#/PaginationMeta"
+      $ref: "./field.yaml#/CursorPaginationMeta"
 
 Field:
   type: object

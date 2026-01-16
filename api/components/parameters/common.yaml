@@ -14,14 +14,13 @@ Offset:
     type: integer
     default: 0
 
-Page:
-  name: page
+Cursor:
+  name: cursor
   in: query
-  required: true
-  description: ページ番号(1始まり)
+  required: false
+  description: 次ページ取得用カーソル(Base64エンコード)。省略時は先頭から取得
   schema:
-    type: integer
-    minimum: 1
+    type: string
 
 PageSize:
   name: pageSize
