@@ -42,12 +42,11 @@ type FieldHandlerTestSuite struct {
 func (s *FieldHandlerTestSuite) SetupTest() {
 	s.mockUC = new(MockListFieldsUseCase)
 	s.logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	s.handler = NewFieldHandler(
-		&usecase.ListFieldsUseCase{},
-		s.logger,
-	)
-	// モックを使用するためにフィールドを直接設定
-	s.handler.listFieldsUC = nil
+	// validateAndNormalizeParams等のテスト用にハンドラーを直接構築
+	s.handler = &FieldHandler{
+		listFieldsUC: nil,
+		logger:       s.logger,
+	}
 }
 
 func TestFieldHandlerSuite(t *testing.T) {
