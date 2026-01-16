@@ -9,19 +9,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
-
-const countFields = `-- name: CountFields :one
-SELECT COUNT(*) FROM fields
-`
-
-// 圃場の総数を取得
-func (q *Queries) CountFields(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countFields)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
 
 const createField = `-- name: CreateField :one
 INSERT INTO fields (
@@ -189,7 +178,7 @@ func (q *Queries) GetH3IndexesByFieldIDs(ctx context.Context, ids []uuid.UUID) (
 	return items, nil
 }
 
-const listFields = `-- name: ListFields :many
+const listFieldsByCityCode = `-- name: ListFieldsByCityCode :many
 SELECT
     id,
     geometry,
@@ -207,19 +196,21 @@ SELECT
     created_by,
     updated_by
 FROM fields
+WHERE city_code = $1
 ORDER BY created_at DESC
-LIMIT $1
-OFFSET $2
+LIMIT $2
+OFFSET $3
 `
 
-type ListFieldsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
+type ListFieldsByCityCodeParams struct {
+	CityCode string `json:"city_code"`
+	Limit    int32  `json:"limit"`
+	Offset   int32  `json:"offset"`
 }
 
-// 圃場一覧を取得
-func (q *Queries) ListFields(ctx context.Context, arg *ListFieldsParams) ([]*Field, error) {
-	rows, err := q.db.Query(ctx, listFields, arg.Limit, arg.Offset)
+// 市区町村コードで圃場一覧を取得
+func (q *Queries) ListFieldsByCityCode(ctx context.Context, arg *ListFieldsByCityCodeParams) ([]*Field, error) {
+	rows, err := q.db.Query(ctx, listFieldsByCityCode, arg.CityCode, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +245,7 @@ func (q *Queries) ListFields(ctx context.Context, arg *ListFieldsParams) ([]*Fie
 	return items, nil
 }
 
-const listFieldsByCityCode = `-- name: ListFieldsByCityCode :many
+const listFieldsByCursor = `-- name: ListFieldsByCursor :many
 SELECT
     id,
     geometry,
@@ -272,21 +263,26 @@ SELECT
     created_by,
     updated_by
 FROM fields
-WHERE city_code = $1
-ORDER BY created_at DESC
-LIMIT $2
-OFFSET $3
+WHERE
+    CASE
+        WHEN $1::timestamptz IS NULL THEN TRUE
+        ELSE (created_at < $1)
+             OR (created_at = $1 AND id < $2)
+    END
+ORDER BY created_at DESC, id DESC
+LIMIT $3
 `
 
-type ListFieldsByCityCodeParams struct {
-	CityCode string `json:"city_code"`
-	Limit    int32  `json:"limit"`
-	Offset   int32  `json:"offset"`
+type ListFieldsByCursorParams struct {
+	CursorCreatedAt pgtype.Timestamptz `json:"cursor_created_at"`
+	CursorID        uuid.UUID          `json:"cursor_id"`
+	PageLimit       int32              `json:"page_limit"`
 }
 
-// 市区町村コードで圃場一覧を取得
-func (q *Queries) ListFieldsByCityCode(ctx context.Context, arg *ListFieldsByCityCodeParams) ([]*Field, error) {
-	rows, err := q.db.Query(ctx, listFieldsByCityCode, arg.CityCode, arg.Limit, arg.Offset)
+// カーソルベースで圃場一覧を取得
+// cursor_created_atとcursor_idがNULLの場合は先頭から取得
+func (q *Queries) ListFieldsByCursor(ctx context.Context, arg *ListFieldsByCursorParams) ([]*Field, error) {
+	rows, err := q.db.Query(ctx, listFieldsByCursor, arg.CursorCreatedAt, arg.CursorID, arg.PageLimit)
 	if err != nil {
 		return nil, err
 	}

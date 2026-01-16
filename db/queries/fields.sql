@@ -19,8 +19,9 @@ SELECT
 FROM fields
 WHERE id = $1;
 
--- name: ListFields :many
--- 圃場一覧を取得
+-- name: ListFieldsByCursor :many
+-- カーソルベースで圃場一覧を取得
+-- cursor_created_atとcursor_idがNULLの場合は先頭から取得
 SELECT
     id,
     geometry,
@@ -38,13 +39,14 @@ SELECT
     created_by,
     updated_by
 FROM fields
-ORDER BY created_at DESC
-LIMIT $1
-OFFSET $2;
-
--- name: CountFields :one
--- 圃場の総数を取得
-SELECT COUNT(*) FROM fields;
+WHERE
+    CASE
+        WHEN @cursor_created_at::timestamptz IS NULL THEN TRUE
+        ELSE (created_at < @cursor_created_at)
+             OR (created_at = @cursor_created_at AND id < @cursor_id)
+    END
+ORDER BY created_at DESC, id DESC
+LIMIT @page_limit;
 
 -- name: ListFieldsByCityCode :many
 -- 市区町村コードで圃場一覧を取得
