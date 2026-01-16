@@ -22,7 +22,7 @@ type MockFieldQuery struct {
 	mock.Mock
 }
 
-func (m *MockFieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int32) ([]*entity.Field, error) {
+func (m *MockFieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int) ([]*entity.Field, error) {
 	args := m.Called(ctx, cursor, limit)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -88,7 +88,7 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_First
 	}
 
 	// cursor=nil, limit=pageSize+1(21)で呼ばれる
-	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), 21).Return(fields, nil)
 
 	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
@@ -122,7 +122,7 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_HasMo
 		}
 	}
 
-	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), 21).Return(fields, nil)
 
 	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
@@ -141,7 +141,7 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_HasMo
 func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_EmptyResult() {
 	ctx := context.Background()
 
-	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return([]*entity.Field{}, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), 21).Return([]*entity.Field{}, nil)
 
 	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
@@ -171,7 +171,7 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_WithC
 		},
 	}
 
-	s.mockQuery.On("ListByCursor", ctx, cursor, int32(21)).Return(fields, nil)
+	s.mockQuery.On("ListByCursor", ctx, cursor, 21).Return(fields, nil)
 
 	input := ListFieldsInput{Cursor: cursor, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
@@ -211,7 +211,7 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_WithG
 		},
 	}
 
-	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), 21).Return(fields, nil)
 
 	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
@@ -248,7 +248,7 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_Witho
 		},
 	}
 
-	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), 21).Return(fields, nil)
 
 	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
@@ -267,7 +267,7 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_ListError() {
 	ctx := context.Background()
 	expectedErr := errors.New("データベースエラー")
 
-	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(nil, expectedErr)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), 21).Return(nil, expectedErr)
 
 	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
