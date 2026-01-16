@@ -279,6 +279,7 @@ Test{メソッド}_{種類}_{詳細}
 ```bash
 make test          # 全テスト実行
 make lint          # Lint実行
+make gosec-scan    # セキュリティスキャン
 make build         # ビルド確認
 ```
 
@@ -288,3 +289,39 @@ make build         # ビルド確認
 2. **エラーハンドリング**: `_` でのエラー無視は禁止、必ず `require.NoError()` でチェック
 3. **機能間参照禁止**: 異なるfeatureパッケージ間で直接importしない
 4. **generated編集禁止**: `internal/generated/` 配下のファイルは編集しない
+5. **int/int32変換**: 下記「型変換のベストプラクティス」を参照
+
+## 型変換のベストプラクティス
+
+### int → int32 変換 (gosec G115対策)
+
+SQLCは`int32`を使用するが、Application層では`int`を使用する。`#nosec`での抑制は禁止。
+
+**正しいアプローチ**:
+
+1. **Application層(Query Interface)**: `int`を使用
+   ```go
+   type FieldQuery interface {
+       ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int) ([]*entity.Field, error)
+   }
+   ```
+
+2. **Infrastructure層**: `int`を受け取り、明示的なバウンドチェック後に`int32`へ変換
+   ```go
+   func (q *fieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int) ([]*entity.Field, error) {
+       // limitの範囲チェック
+       const maxLimit = 1001
+       if limit < 1 || limit > maxLimit {
+           return nil, fmt.Errorf("limitは1から%dの範囲で指定してください: %d", maxLimit, limit)
+       }
+
+       params := &sqlc.ListFieldsByCursorParams{
+           PageLimit: int32(limit), // 上記チェック済みのため安全
+       }
+       // ...
+   }
+   ```
+
+**禁止パターン**:
+- `// #nosec G115` での警告抑制
+- Application層での`int32`使用
