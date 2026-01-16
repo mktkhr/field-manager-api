@@ -19,6 +19,7 @@ Claudeがユーザーと対話する場合は必ず日本語で行ってくだ�
 - **英語でのコメント・ログ出力の使用**
   - すべてのコード内コメント、ログメッセージ、エラーメッセージは日本語で記載すること
   - テストコード内のコメント、エラーメッセージも日本語で記載すること
+- **`#nosec`によるgosec警告の抑制**
 
 ### テスト実装ガイドライン
 
@@ -164,7 +165,7 @@ Presentation → Application → Domain ← Infrastructure
 3. **実装**: Domain(Entity+RepoIF) → Application(QueryIF+Usecase) → Infrastructure(Query/Repo実装) → Presentation(ServerIF)
 4. **テスト**: 各レイヤーで`*_test.go`（単体）/`*_integration_test.go`(統合)作成
 5. **DI登録**: `internal/server/router.go`に追加
-6. **検証**: `make test` → `make cover` → `make lint` → `make gesec-scan` → `make build`
+6. **検証**: `make test` → `make cover` → `make lint` → `make gosec-scan` → `make build`
 
 ## データベース開発ルール
 

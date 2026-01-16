@@ -57,3 +57,7 @@ cmd/wagri-fetcher/wagri-fetcher.zip
 # ビルドされたバイナリ(ルートレベルのみ)
 /import-processor
 /cluster-worker
+
+# Claude Code
+!.claude
+.claude/settings.local.json

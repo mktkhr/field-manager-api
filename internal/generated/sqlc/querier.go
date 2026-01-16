@@ -29,8 +29,6 @@ type Querier interface {
 	AggregateClustersByRes9ForCells(ctx context.Context, h3Cells []string) ([]*AggregateClustersByRes9ForCellsRow, error)
 	// 圃場IDで農地台帳の件数を取得
 	CountFieldLandRegistriesByFieldID(ctx context.Context, fieldID uuid.UUID) (int64, error)
-	// 圃場の総数を取得
-	CountFields(ctx context.Context) (int64, error)
 	// インポートジョブの総数を取得
 	CountImportJobs(ctx context.Context) (int64, error)
 	// ステータス別のインポートジョブ数を取得
@@ -89,10 +87,12 @@ type Querier interface {
 	HasPendingOrProcessingJob(ctx context.Context) (bool, error)
 	// 圃場IDで農地台帳一覧を取得
 	ListFieldLandRegistriesByFieldID(ctx context.Context, fieldID uuid.UUID) ([]*FieldLandRegistry, error)
-	// 圃場一覧を取得
-	ListFields(ctx context.Context, arg *ListFieldsParams) ([]*Field, error)
 	// 市区町村コードで圃場一覧を取得
 	ListFieldsByCityCode(ctx context.Context, arg *ListFieldsByCityCodeParams) ([]*Field, error)
+	// カーソルベースで圃場一覧を取得
+	// cursor_created_atとcursor_idがNULLの場合は先頭から取得
+	// geometry, centroidはST_AsBinaryでWKB形式に変換
+	ListFieldsByCursor(ctx context.Context, arg *ListFieldsByCursorParams) ([]*ListFieldsByCursorRow, error)
 	// 遊休農地状況一覧を取得
 	ListIdleLandStatuses(ctx context.Context) ([]*IdleLandStatus, error)
 	// インポートジョブ一覧を取得

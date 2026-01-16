@@ -1,0 +1,19 @@
+# ヘルスチェックエンドポイント
+health:
+  get:
+    tags:
+      - health
+    summary: ヘルスチェック
+    operationId: healthCheck
+    security: []
+    responses:
+      "200":
+        description: サーバーが正常に動作している
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/common.yaml#/HealthResponse"
+      "429":
+        $ref: "../components/responses/errors.yaml#/TooManyRequests"
+      "503":
+        $ref: "../components/responses/errors.yaml#/ServiceUnavailable"

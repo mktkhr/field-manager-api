@@ -1,0 +1,50 @@
+# クラスターエンドポイント
+clusters:
+  get:
+    tags:
+      - clusters
+    summary: クラスター一覧取得
+    description: |
+      指定されたズームレベルとバウンディングボックス内のH3クラスターを取得する。
+      ズームレベルに応じて最適なH3解像度を自動選択する。
+    operationId: getClusters
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/Zoom"
+      - $ref: "../components/parameters/common.yaml#/SwLat"
+      - $ref: "../components/parameters/common.yaml#/SwLng"
+      - $ref: "../components/parameters/common.yaml#/NeLat"
+      - $ref: "../components/parameters/common.yaml#/NeLng"
+    responses:
+      "200":
+        description: クラスター一覧
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/cluster.yaml#/ClusterListResponse"
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+
+recalculate:
+  post:
+    tags:
+      - clusters
+    summary: クラスター再計算リクエスト
+    description: |
+      クラスターの再計算ジョブをエンキューする。
+      既に保留中または処理中のジョブがある場合はスキップされる。
+    operationId: recalculateClusters
+    security: []
+    responses:
+      "202":
+        description: 再計算ジョブ受付
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/cluster.yaml#/RecalculateResponse"
+      "409":
+        $ref: "../components/responses/errors.yaml#/Conflict"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"

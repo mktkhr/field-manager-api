@@ -41,8 +41,13 @@ func (h *ClusterHandler) GetClusters(ctx context.Context, request openapi.GetClu
 	// パラメータのバリデーション
 	if err := h.validateGetClustersParams(params); err != nil {
 		return openapi.GetClusters400JSONResponse{
-			Code:    "invalid_parameter",
-			Message: err.Error(),
+			BadRequestJSONResponse: openapi.BadRequestJSONResponse{
+				Data: nil,
+				Errors: &[]openapi.Error{{
+					Code:    "invalid_parameter",
+					Message: err.Error(),
+				}},
+			},
 		}, nil
 	}
 
@@ -58,8 +63,13 @@ func (h *ClusterHandler) GetClusters(ctx context.Context, request openapi.GetClu
 		h.logger.Error("クラスター取得に失敗しました",
 			slog.String("error", err.Error()))
 		return openapi.GetClusters500JSONResponse{
-			Code:    "internal_error",
-			Message: "クラスターの取得に失敗しました",
+			InternalServerErrorJSONResponse: openapi.InternalServerErrorJSONResponse{
+				Data: nil,
+				Errors: &[]openapi.Error{{
+					Code:    "internal_error",
+					Message: "クラスターの取得に失敗しました",
+				}},
+			},
 		}, nil
 	}
 
@@ -75,8 +85,11 @@ func (h *ClusterHandler) GetClusters(ctx context.Context, request openapi.GetClu
 	}
 
 	return openapi.GetClusters200JSONResponse{
-		Clusters: clusters,
-		IsStale:  output.IsStale,
+		Data: &openapi.ClusterListData{
+			Clusters: clusters,
+			IsStale:  output.IsStale,
+		},
+		Errors: nil,
 	}, nil
 }
 
@@ -130,20 +143,33 @@ func (h *ClusterHandler) RecalculateClusters(ctx context.Context, _ openapi.Reca
 		h.logger.Error("クラスター再計算ジョブのエンキューに失敗しました",
 			slog.String("error", err.Error()))
 		return openapi.RecalculateClusters500JSONResponse{
-			Code:    "internal_error",
-			Message: "クラスター再計算ジョブのエンキューに失敗しました",
+			InternalServerErrorJSONResponse: openapi.InternalServerErrorJSONResponse{
+				Data: nil,
+				Errors: &[]openapi.Error{{
+					Code:    "internal_error",
+					Message: "クラスター再計算ジョブのエンキューに失敗しました",
+				}},
+			},
 		}, nil
 	}
 
 	if !output.Enqueued {
 		return openapi.RecalculateClusters409JSONResponse{
-			Code:    "already_running",
-			Message: "既にクラスター再計算ジョブが実行中です",
+			ConflictJSONResponse: openapi.ConflictJSONResponse{
+				Data: nil,
+				Errors: &[]openapi.Error{{
+					Code:    "already_running",
+					Message: "既にクラスター再計算ジョブが実行中です",
+				}},
+			},
 		}, nil
 	}
 
 	return openapi.RecalculateClusters202JSONResponse{
-		Message:  "クラスター再計算ジョブをエンキューしました",
-		Enqueued: true,
+		Data: &openapi.RecalculateData{
+			Message:  "クラスター再計算ジョブをエンキューしました",
+			Enqueued: true,
+		},
+		Errors: nil,
 	}, nil
 }

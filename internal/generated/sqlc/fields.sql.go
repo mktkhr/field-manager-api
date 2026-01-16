@@ -9,19 +9,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
-
-const countFields = `-- name: CountFields :one
-SELECT COUNT(*) FROM fields
-`
-
-// 圃場の総数を取得
-func (q *Queries) CountFields(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countFields)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
 
 const createField = `-- name: CreateField :one
 INSERT INTO fields (
@@ -189,71 +178,6 @@ func (q *Queries) GetH3IndexesByFieldIDs(ctx context.Context, ids []uuid.UUID) (
 	return items, nil
 }
 
-const listFields = `-- name: ListFields :many
-SELECT
-    id,
-    geometry,
-    centroid,
-    area_sqm,
-    h3_index_res3,
-    h3_index_res5,
-    h3_index_res7,
-    h3_index_res9,
-    city_code,
-    name,
-    soil_type_id,
-    created_at,
-    updated_at,
-    created_by,
-    updated_by
-FROM fields
-ORDER BY created_at DESC
-LIMIT $1
-OFFSET $2
-`
-
-type ListFieldsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
-
-// 圃場一覧を取得
-func (q *Queries) ListFields(ctx context.Context, arg *ListFieldsParams) ([]*Field, error) {
-	rows, err := q.db.Query(ctx, listFields, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []*Field{}
-	for rows.Next() {
-		var i Field
-		if err := rows.Scan(
-			&i.ID,
-			&i.Geometry,
-			&i.Centroid,
-			&i.AreaSqm,
-			&i.H3IndexRes3,
-			&i.H3IndexRes5,
-			&i.H3IndexRes7,
-			&i.H3IndexRes9,
-			&i.CityCode,
-			&i.Name,
-			&i.SoilTypeID,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.CreatedBy,
-			&i.UpdatedBy,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listFieldsByCityCode = `-- name: ListFieldsByCityCode :many
 SELECT
     id,
@@ -294,6 +218,97 @@ func (q *Queries) ListFieldsByCityCode(ctx context.Context, arg *ListFieldsByCit
 	items := []*Field{}
 	for rows.Next() {
 		var i Field
+		if err := rows.Scan(
+			&i.ID,
+			&i.Geometry,
+			&i.Centroid,
+			&i.AreaSqm,
+			&i.H3IndexRes3,
+			&i.H3IndexRes5,
+			&i.H3IndexRes7,
+			&i.H3IndexRes9,
+			&i.CityCode,
+			&i.Name,
+			&i.SoilTypeID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFieldsByCursor = `-- name: ListFieldsByCursor :many
+SELECT
+    id,
+    ST_AsBinary(geometry) AS geometry,
+    ST_AsBinary(centroid) AS centroid,
+    area_sqm,
+    h3_index_res3,
+    h3_index_res5,
+    h3_index_res7,
+    h3_index_res9,
+    city_code,
+    name,
+    soil_type_id,
+    created_at,
+    updated_at,
+    created_by,
+    updated_by
+FROM fields
+WHERE
+    CASE
+        WHEN $1::timestamptz IS NULL THEN TRUE
+        ELSE (created_at < $1)
+             OR (created_at = $1 AND id < $2)
+    END
+ORDER BY created_at DESC, id DESC
+LIMIT $3
+`
+
+type ListFieldsByCursorParams struct {
+	CursorCreatedAt pgtype.Timestamptz `json:"cursor_created_at"`
+	CursorID        uuid.UUID          `json:"cursor_id"`
+	PageLimit       int32              `json:"page_limit"`
+}
+
+type ListFieldsByCursorRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Geometry    interface{}        `json:"geometry"`
+	Centroid    interface{}        `json:"centroid"`
+	AreaSqm     *float64           `json:"area_sqm"`
+	H3IndexRes3 *string            `json:"h3_index_res3"`
+	H3IndexRes5 *string            `json:"h3_index_res5"`
+	H3IndexRes7 *string            `json:"h3_index_res7"`
+	H3IndexRes9 *string            `json:"h3_index_res9"`
+	CityCode    string             `json:"city_code"`
+	Name        string             `json:"name"`
+	SoilTypeID  uuid.NullUUID      `json:"soil_type_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	CreatedBy   uuid.NullUUID      `json:"created_by"`
+	UpdatedBy   uuid.NullUUID      `json:"updated_by"`
+}
+
+// カーソルベースで圃場一覧を取得
+// cursor_created_atとcursor_idがNULLの場合は先頭から取得
+// geometry, centroidはST_AsBinaryでWKB形式に変換
+func (q *Queries) ListFieldsByCursor(ctx context.Context, arg *ListFieldsByCursorParams) ([]*ListFieldsByCursorRow, error) {
+	rows, err := q.db.Query(ctx, listFieldsByCursor, arg.CursorCreatedAt, arg.CursorID, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []*ListFieldsByCursorRow{}
+	for rows.Next() {
+		var i ListFieldsByCursorRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Geometry,
