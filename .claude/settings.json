@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make build:*)",
+      "Bash(make test:*)",
+      "Bash(go test:*)",
+      "Bash(make gosec-scan:*)",
+      "Bash(make lint:*)"
+    ]
+  }
+}
