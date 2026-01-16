@@ -128,15 +128,20 @@ func (u *ListFieldsUseCase) toFieldOutput(field *entity.Field) FieldOutput {
 	if field.Geometry != nil {
 		coords := field.Geometry.FlatCoords()
 		stride := field.Geometry.Stride()
-		numPoints := len(coords) / stride
 
-		geometry := make([]Coordinate, 0, numPoints)
-		for i := 0; i < numPoints; i++ {
-			lng := coords[i*stride]   // X = 経度
-			lat := coords[i*stride+1] // Y = 緯度
-			geometry = append(geometry, Coordinate{Lat: lat, Lng: lng})
+		// strideが0または座標が空の場合は空配列を設定
+		if stride == 0 || len(coords) == 0 {
+			output.Geometry = []Coordinate{}
+		} else {
+			numPoints := len(coords) / stride
+			geometry := make([]Coordinate, 0, numPoints)
+			for i := 0; i < numPoints; i++ {
+				lng := coords[i*stride]   // X = 経度
+				lat := coords[i*stride+1] // Y = 緯度
+				geometry = append(geometry, Coordinate{Lat: lat, Lng: lng})
+			}
+			output.Geometry = geometry
 		}
-		output.Geometry = geometry
 	}
 
 	// Centroid変換(Point -> Coordinate)
