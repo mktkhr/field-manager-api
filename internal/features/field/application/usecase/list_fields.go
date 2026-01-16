@@ -12,8 +12,8 @@ import (
 
 // ListFieldsInput は圃場一覧取得ユースケースの入力
 type ListFieldsInput struct {
-	Page     int // ページ番号(1始まり)
-	PageSize int // 1ページあたりの件数
+	Cursor   *entity.FieldCursor // カーソル(nilの場合は先頭から)
+	PageSize int                 // 1ページあたりの件数
 }
 
 // Coordinate は座標を表す
@@ -33,18 +33,17 @@ type FieldOutput struct {
 	Centroid   Coordinate   // 重心座標
 }
 
-// PaginationOutput はページネーション出力
-type PaginationOutput struct {
-	Total      int64
-	Page       int
-	PageSize   int
-	TotalPages int
+// CursorPaginationOutput はカーソルベースページネーション出力
+type CursorPaginationOutput struct {
+	NextCursor *string // 次ページ用カーソル(最終ページの場合はnil)
+	HasMore    bool    // 次ページが存在するか
+	PageSize   int     // ページサイズ
 }
 
 // ListFieldsOutput は圃場一覧取得ユースケースの出力
 type ListFieldsOutput struct {
 	Fields     []FieldOutput
-	Pagination PaginationOutput
+	Pagination CursorPaginationOutput
 }
 
 // ListFieldsUseCase は圃場一覧取得ユースケース
@@ -66,24 +65,22 @@ func NewListFieldsUseCase(
 
 // Execute は圃場一覧取得を実行する
 func (u *ListFieldsUseCase) Execute(ctx context.Context, input ListFieldsInput) (*ListFieldsOutput, error) {
-	// ページネーション計算
-	limit := int32(input.PageSize)
-	offset := int32((input.Page - 1) * input.PageSize)
-
-	// 総件数取得
-	total, err := u.fieldQuery.Count(ctx)
-	if err != nil {
-		u.logger.Error("圃場の総数取得に失敗しました",
-			slog.String("error", err.Error()))
-		return nil, err
-	}
+	// limit + 1 を取得して次ページの存在を確認する
+	limit := int32(input.PageSize + 1)
 
 	// 圃場一覧取得
-	fields, err := u.fieldQuery.List(ctx, limit, offset)
+	fields, err := u.fieldQuery.ListByCursor(ctx, input.Cursor, limit)
 	if err != nil {
 		u.logger.Error("圃場一覧の取得に失敗しました",
 			slog.String("error", err.Error()))
 		return nil, err
+	}
+
+	// 次ページの存在確認
+	hasMore := len(fields) > input.PageSize
+	if hasMore {
+		// 余分に取得した1件を除外
+		fields = fields[:input.PageSize]
 	}
 
 	// 出力変換
@@ -93,23 +90,26 @@ func (u *ListFieldsUseCase) Execute(ctx context.Context, input ListFieldsInput) 
 		outputs = append(outputs, output)
 	}
 
-	// 総ページ数計算
-	totalPages := int(total) / input.PageSize
-	if int(total)%input.PageSize > 0 {
-		totalPages++
-	}
-	// 0件の場合は総ページ数を0にする
-	if total == 0 {
-		totalPages = 0
+	// 次ページ用カーソルの生成
+	var nextCursor *string
+	if hasMore && len(fields) > 0 {
+		lastField := fields[len(fields)-1]
+		cursor := entity.NewFieldCursor(lastField.CreatedAt, lastField.ID)
+		encoded, err := cursor.Encode()
+		if err != nil {
+			u.logger.Error("カーソルのエンコードに失敗しました",
+				slog.String("error", err.Error()))
+			return nil, err
+		}
+		nextCursor = &encoded
 	}
 
 	return &ListFieldsOutput{
 		Fields: outputs,
-		Pagination: PaginationOutput{
-			Total:      total,
-			Page:       input.Page,
+		Pagination: CursorPaginationOutput{
+			NextCursor: nextCursor,
+			HasMore:    hasMore,
 			PageSize:   input.PageSize,
-			TotalPages: totalPages,
 		},
 	}, nil
 }

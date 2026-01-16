@@ -9,10 +9,8 @@ import (
 
 // FieldQuery は圃場の照会インターフェース
 type FieldQuery interface {
-	// List は圃場一覧を取得する
-	// limit: 取得件数, offset: スキップ件数
-	List(ctx context.Context, limit, offset int32) ([]*entity.Field, error)
-
-	// Count は圃場の総数を取得する
-	Count(ctx context.Context) (int64, error)
+	// ListByCursor はカーソルベースで圃場一覧を取得する
+	// cursor: 前ページの最後の圃場のカーソル(nilの場合は先頭から)
+	// limit: 取得件数
+	ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int32) ([]*entity.Field, error)
 }

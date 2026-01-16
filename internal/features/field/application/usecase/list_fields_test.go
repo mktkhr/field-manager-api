@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
@@ -21,17 +22,12 @@ type MockFieldQuery struct {
 	mock.Mock
 }
 
-func (m *MockFieldQuery) List(ctx context.Context, limit, offset int32) ([]*entity.Field, error) {
-	args := m.Called(ctx, limit, offset)
+func (m *MockFieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int32) ([]*entity.Field, error) {
+	args := m.Called(ctx, cursor, limit)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]*entity.Field), args.Error(1)
-}
-
-func (m *MockFieldQuery) Count(ctx context.Context) (int64, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(int64), args.Error(1)
 }
 
 // ListFieldsUseCaseTestSuite はListFieldsUseCaseのテストスイート
@@ -60,10 +56,11 @@ func (s *ListFieldsUseCaseTestSuite) TestNewListFieldsUseCase_Success() {
 	require.NotNil(s.T(), uc.logger, "loggerがnilです")
 }
 
-// TestListFieldsUseCase_Execute_Success は正常に圃場一覧を取得できることをテスト
-func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success() {
+// TestListFieldsUseCase_Execute_Success_FirstPage は初回ページ取得が正常に動作することをテスト
+func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_FirstPage() {
 	ctx := context.Background()
 	fieldID := uuid.New()
+	createdAt := time.Now()
 
 	// テスト用のPolygon作成
 	polygon := geom.NewPolygon(geom.XY)
@@ -77,21 +74,23 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success() {
 	require.NoError(s.T(), err, "重心座標設定に失敗")
 
 	area := 10000.0
+	// pageSize + 1 件を返す(次ページがあることを示す)
 	fields := []*entity.Field{
 		{
-			ID:       fieldID,
-			Name:     "テスト圃場",
-			CityCode: "12345",
-			AreaSqm:  &area,
-			Geometry: polygon,
-			Centroid: centroid,
+			ID:        fieldID,
+			Name:      "テスト圃場",
+			CityCode:  "12345",
+			AreaSqm:   &area,
+			Geometry:  polygon,
+			Centroid:  centroid,
+			CreatedAt: createdAt,
 		},
 	}
 
-	s.mockQuery.On("Count", ctx).Return(int64(1), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(0)).Return(fields, nil)
+	// cursor=nil, limit=pageSize+1(21)で呼ばれる
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
 
-	input := ListFieldsInput{Page: 1, PageSize: 20}
+	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
 
 	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
@@ -100,10 +99,40 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success() {
 	require.Equal(s.T(), fieldID, output.Fields[0].ID, "圃場IDが一致しません")
 	require.Equal(s.T(), "テスト圃場", output.Fields[0].Name, "圃場名が一致しません")
 	require.Equal(s.T(), "12345", output.Fields[0].CityCode, "市区町村コードが一致しません")
-	require.Equal(s.T(), int64(1), output.Pagination.Total, "総件数が一致しません")
-	require.Equal(s.T(), 1, output.Pagination.Page, "ページ番号が一致しません")
-	require.Equal(s.T(), 20, output.Pagination.PageSize, "ページサイズが一致しません")
-	require.Equal(s.T(), 1, output.Pagination.TotalPages, "総ページ数が一致しません")
+	require.False(s.T(), output.Pagination.HasMore, "HasMoreがfalseではありません")
+	require.Nil(s.T(), output.Pagination.NextCursor, "NextCursorがnilではありません")
+	require.Equal(s.T(), 20, output.Pagination.PageSize, "PageSizeが一致しません")
+
+	s.mockQuery.AssertExpectations(s.T())
+}
+
+// TestListFieldsUseCase_Execute_Success_HasMore は次ページがある場合のテスト
+func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_HasMore() {
+	ctx := context.Background()
+	now := time.Now()
+
+	// pageSize + 1 件(21件)を返す(次ページがあることを示す)
+	fields := make([]*entity.Field, 21)
+	for i := 0; i < 21; i++ {
+		fields[i] = &entity.Field{
+			ID:        uuid.New(),
+			Name:      "テスト圃場",
+			CityCode:  "12345",
+			CreatedAt: now.Add(-time.Duration(i) * time.Hour),
+		}
+	}
+
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
+
+	input := ListFieldsInput{Cursor: nil, PageSize: 20}
+	output, err := s.useCase.Execute(ctx, input)
+
+	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
+	require.NotNil(s.T(), output, "出力がnilです")
+	require.Len(s.T(), output.Fields, 20, "圃場数が期待値と異なります(21件中20件を返す)")
+	require.True(s.T(), output.Pagination.HasMore, "HasMoreがtrueではありません")
+	require.NotNil(s.T(), output.Pagination.NextCursor, "NextCursorがnilです")
+	require.Equal(s.T(), 20, output.Pagination.PageSize, "PageSizeが一致しません")
 
 	s.mockQuery.AssertExpectations(s.T())
 }
@@ -112,17 +141,45 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success() {
 func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_EmptyResult() {
 	ctx := context.Background()
 
-	s.mockQuery.On("Count", ctx).Return(int64(0), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(0)).Return([]*entity.Field{}, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return([]*entity.Field{}, nil)
 
-	input := ListFieldsInput{Page: 1, PageSize: 20}
+	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
 
 	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
 	require.NotNil(s.T(), output, "出力がnilです")
 	require.Empty(s.T(), output.Fields, "圃場リストが空ではありません")
-	require.Equal(s.T(), int64(0), output.Pagination.Total, "総件数が0ではありません")
-	require.Equal(s.T(), 0, output.Pagination.TotalPages, "総ページ数が0ではありません")
+	require.False(s.T(), output.Pagination.HasMore, "HasMoreがfalseではありません")
+	require.Nil(s.T(), output.Pagination.NextCursor, "NextCursorがnilではありません")
+
+	s.mockQuery.AssertExpectations(s.T())
+}
+
+// TestListFieldsUseCase_Execute_Success_WithCursor はカーソル指定時の取得をテスト
+func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_WithCursor() {
+	ctx := context.Background()
+	cursorTime := time.Now().Add(-time.Hour)
+	cursorID := uuid.New()
+	cursor := entity.NewFieldCursor(cursorTime, cursorID)
+
+	fields := []*entity.Field{
+		{
+			ID:        uuid.New(),
+			Name:      "テスト圃場2",
+			CityCode:  "12345",
+			CreatedAt: cursorTime.Add(-time.Hour),
+		},
+	}
+
+	s.mockQuery.On("ListByCursor", ctx, cursor, int32(21)).Return(fields, nil)
+
+	input := ListFieldsInput{Cursor: cursor, PageSize: 20}
+	output, err := s.useCase.Execute(ctx, input)
+
+	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
+	require.NotNil(s.T(), output, "出力がnilです")
+	require.Len(s.T(), output.Fields, 1, "圃場数が期待値と異なります")
+	require.False(s.T(), output.Pagination.HasMore, "HasMoreがfalseではありません")
 
 	s.mockQuery.AssertExpectations(s.T())
 }
@@ -145,18 +202,18 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_WithG
 
 	fields := []*entity.Field{
 		{
-			ID:       fieldID,
-			Name:     "テスト圃場",
-			CityCode: "12345",
-			Geometry: polygon,
-			Centroid: centroid,
+			ID:        fieldID,
+			Name:      "テスト圃場",
+			CityCode:  "12345",
+			Geometry:  polygon,
+			Centroid:  centroid,
+			CreatedAt: time.Now(),
 		},
 	}
 
-	s.mockQuery.On("Count", ctx).Return(int64(1), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(0)).Return(fields, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
 
-	input := ListFieldsInput{Page: 1, PageSize: 20}
+	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
 
 	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
@@ -182,18 +239,18 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_Witho
 
 	fields := []*entity.Field{
 		{
-			ID:       fieldID,
-			Name:     "テスト圃場",
-			CityCode: "12345",
-			Geometry: nil,
-			Centroid: nil,
+			ID:        fieldID,
+			Name:      "テスト圃場",
+			CityCode:  "12345",
+			Geometry:  nil,
+			Centroid:  nil,
+			CreatedAt: time.Now(),
 		},
 	}
 
-	s.mockQuery.On("Count", ctx).Return(int64(1), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(0)).Return(fields, nil)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(fields, nil)
 
-	input := ListFieldsInput{Page: 1, PageSize: 20}
+	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
 
 	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
@@ -205,90 +262,19 @@ func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_Success_Witho
 	s.mockQuery.AssertExpectations(s.T())
 }
 
-// TestListFieldsUseCase_Execute_CountError はCount失敗時にエラーを返すことをテスト
-func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_CountError() {
-	ctx := context.Background()
-	expectedErr := errors.New("データベースエラー")
-
-	s.mockQuery.On("Count", ctx).Return(int64(0), expectedErr)
-
-	input := ListFieldsInput{Page: 1, PageSize: 20}
-	output, err := s.useCase.Execute(ctx, input)
-
-	require.Error(s.T(), err, "エラーが返されませんでした")
-	require.Nil(s.T(), output, "出力がnilではありません")
-	require.Equal(s.T(), expectedErr, err, "エラーが期待値と一致しません")
-
-	s.mockQuery.AssertExpectations(s.T())
-}
-
 // TestListFieldsUseCase_Execute_ListError はList失敗時にエラーを返すことをテスト
 func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_ListError() {
 	ctx := context.Background()
 	expectedErr := errors.New("データベースエラー")
 
-	s.mockQuery.On("Count", ctx).Return(int64(10), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(0)).Return(nil, expectedErr)
+	s.mockQuery.On("ListByCursor", ctx, (*entity.FieldCursor)(nil), int32(21)).Return(nil, expectedErr)
 
-	input := ListFieldsInput{Page: 1, PageSize: 20}
+	input := ListFieldsInput{Cursor: nil, PageSize: 20}
 	output, err := s.useCase.Execute(ctx, input)
 
 	require.Error(s.T(), err, "エラーが返されませんでした")
 	require.Nil(s.T(), output, "出力がnilではありません")
 	require.Equal(s.T(), expectedErr, err, "エラーが期待値と一致しません")
-
-	s.mockQuery.AssertExpectations(s.T())
-}
-
-// TestListFieldsUseCase_Execute_PaginationCalculation はページネーション計算が正しく行われることをテスト
-func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_PaginationCalculation() {
-	ctx := context.Background()
-
-	s.mockQuery.On("Count", ctx).Return(int64(45), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(20)).Return([]*entity.Field{}, nil)
-
-	// 2ページ目をリクエスト
-	input := ListFieldsInput{Page: 2, PageSize: 20}
-	output, err := s.useCase.Execute(ctx, input)
-
-	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
-	require.NotNil(s.T(), output, "出力がnilです")
-	require.Equal(s.T(), int64(45), output.Pagination.Total, "総件数が一致しません")
-	require.Equal(s.T(), 2, output.Pagination.Page, "ページ番号が一致しません")
-	require.Equal(s.T(), 20, output.Pagination.PageSize, "ページサイズが一致しません")
-	require.Equal(s.T(), 3, output.Pagination.TotalPages, "総ページ数が一致しません(45件/20件=3ページ)")
-
-	s.mockQuery.AssertExpectations(s.T())
-}
-
-// TestListFieldsUseCase_Execute_TotalPagesCalculation_ExactDivision は総ページ数計算(割り切れる場合)をテスト
-func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_TotalPagesCalculation_ExactDivision() {
-	ctx := context.Background()
-
-	s.mockQuery.On("Count", ctx).Return(int64(40), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(0)).Return([]*entity.Field{}, nil)
-
-	input := ListFieldsInput{Page: 1, PageSize: 20}
-	output, err := s.useCase.Execute(ctx, input)
-
-	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
-	require.Equal(s.T(), 2, output.Pagination.TotalPages, "総ページ数が一致しません(40件/20件=2ページ)")
-
-	s.mockQuery.AssertExpectations(s.T())
-}
-
-// TestListFieldsUseCase_Execute_TotalPagesCalculation_WithRemainder は総ページ数計算(端数がある場合)をテスト
-func (s *ListFieldsUseCaseTestSuite) TestListFieldsUseCase_Execute_TotalPagesCalculation_WithRemainder() {
-	ctx := context.Background()
-
-	s.mockQuery.On("Count", ctx).Return(int64(41), nil)
-	s.mockQuery.On("List", ctx, int32(20), int32(0)).Return([]*entity.Field{}, nil)
-
-	input := ListFieldsInput{Page: 1, PageSize: 20}
-	output, err := s.useCase.Execute(ctx, input)
-
-	require.NoError(s.T(), err, "Execute実行時にエラーが発生")
-	require.Equal(s.T(), 3, output.Pagination.TotalPages, "総ページ数が一致しません(41件/20件=3ページ)")
 
 	s.mockQuery.AssertExpectations(s.T())
 }
