@@ -248,8 +248,8 @@ func (q *Queries) ListFieldsByCityCode(ctx context.Context, arg *ListFieldsByCit
 const listFieldsByCursor = `-- name: ListFieldsByCursor :many
 SELECT
     id,
-    geometry,
-    centroid,
+    ST_AsBinary(geometry) AS geometry,
+    ST_AsBinary(centroid) AS centroid,
     area_sqm,
     h3_index_res3,
     h3_index_res5,
@@ -279,17 +279,36 @@ type ListFieldsByCursorParams struct {
 	PageLimit       int32              `json:"page_limit"`
 }
 
+type ListFieldsByCursorRow struct {
+	ID          uuid.UUID          `json:"id"`
+	Geometry    interface{}        `json:"geometry"`
+	Centroid    interface{}        `json:"centroid"`
+	AreaSqm     *float64           `json:"area_sqm"`
+	H3IndexRes3 *string            `json:"h3_index_res3"`
+	H3IndexRes5 *string            `json:"h3_index_res5"`
+	H3IndexRes7 *string            `json:"h3_index_res7"`
+	H3IndexRes9 *string            `json:"h3_index_res9"`
+	CityCode    string             `json:"city_code"`
+	Name        string             `json:"name"`
+	SoilTypeID  uuid.NullUUID      `json:"soil_type_id"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	CreatedBy   uuid.NullUUID      `json:"created_by"`
+	UpdatedBy   uuid.NullUUID      `json:"updated_by"`
+}
+
 // カーソルベースで圃場一覧を取得
 // cursor_created_atとcursor_idがNULLの場合は先頭から取得
-func (q *Queries) ListFieldsByCursor(ctx context.Context, arg *ListFieldsByCursorParams) ([]*Field, error) {
+// geometry, centroidはST_AsBinaryでWKB形式に変換
+func (q *Queries) ListFieldsByCursor(ctx context.Context, arg *ListFieldsByCursorParams) ([]*ListFieldsByCursorRow, error) {
 	rows, err := q.db.Query(ctx, listFieldsByCursor, arg.CursorCreatedAt, arg.CursorID, arg.PageLimit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []*Field{}
+	items := []*ListFieldsByCursorRow{}
 	for rows.Next() {
-		var i Field
+		var i ListFieldsByCursorRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Geometry,

@@ -91,7 +91,8 @@ type Querier interface {
 	ListFieldsByCityCode(ctx context.Context, arg *ListFieldsByCityCodeParams) ([]*Field, error)
 	// カーソルベースで圃場一覧を取得
 	// cursor_created_atとcursor_idがNULLの場合は先頭から取得
-	ListFieldsByCursor(ctx context.Context, arg *ListFieldsByCursorParams) ([]*Field, error)
+	// geometry, centroidはST_AsBinaryでWKB形式に変換
+	ListFieldsByCursor(ctx context.Context, arg *ListFieldsByCursorParams) ([]*ListFieldsByCursorRow, error)
 	// 遊休農地状況一覧を取得
 	ListIdleLandStatuses(ctx context.Context) ([]*IdleLandStatus, error)
 	// インポートジョブ一覧を取得

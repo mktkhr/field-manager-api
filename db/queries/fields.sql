@@ -22,10 +22,11 @@ WHERE id = $1;
 -- name: ListFieldsByCursor :many
 -- カーソルベースで圃場一覧を取得
 -- cursor_created_atとcursor_idがNULLの場合は先頭から取得
+-- geometry, centroidはST_AsBinaryでWKB形式に変換
 SELECT
     id,
-    geometry,
-    centroid,
+    ST_AsBinary(geometry) AS geometry,
+    ST_AsBinary(centroid) AS centroid,
     area_sqm,
     h3_index_res3,
     h3_index_res5,
