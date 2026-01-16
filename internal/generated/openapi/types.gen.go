@@ -56,6 +56,18 @@ type Coordinate struct {
 	Lng float64 `json:"lng"`
 }
 
+// CursorPaginationMeta defines model for CursorPaginationMeta.
+type CursorPaginationMeta struct {
+	// HasMore 次ページが存在するか
+	HasMore bool `json:"hasMore"`
+
+	// NextCursor 次ページ取得用カーソル(最終ページの場合はnull)
+	NextCursor *string `json:"nextCursor"`
+
+	// PageSize 1ページあたりの件数
+	PageSize int `json:"pageSize"`
+}
+
 // Error defines model for Error.
 type Error struct {
 	Code    string `json:"code"`
@@ -158,21 +170,6 @@ type ImportStatusResponse struct {
 	Errors *[]Error          `json:"errors"`
 }
 
-// PaginationMeta defines model for PaginationMeta.
-type PaginationMeta struct {
-	// Page 現在のページ番号
-	Page int `json:"page"`
-
-	// PageSize 1ページあたりの件数
-	PageSize int `json:"pageSize"`
-
-	// Total 総件数
-	Total int `json:"total"`
-
-	// TotalPages 総ページ数
-	TotalPages int `json:"totalPages"`
-}
-
 // RecalculateData defines model for RecalculateData.
 type RecalculateData struct {
 	// Enqueued ジョブがエンキューされたかどうか
@@ -190,8 +187,11 @@ type RecalculateResponse struct {
 
 // ResponseMeta defines model for ResponseMeta.
 type ResponseMeta struct {
-	Pagination PaginationMeta `json:"pagination"`
+	Pagination CursorPaginationMeta `json:"pagination"`
 }
+
+// Cursor defines model for Cursor.
+type Cursor = string
 
 // FieldId defines model for FieldId.
 type FieldId = openapi_types.UUID
@@ -204,9 +204,6 @@ type NeLat = float64
 
 // NeLng defines model for NeLng.
 type NeLng = float64
-
-// Page defines model for Page.
-type Page = int
 
 // PageSize defines model for PageSize.
 type PageSize = int
@@ -261,8 +258,8 @@ type GetClustersParams struct {
 
 // ListFieldsParams defines parameters for ListFields.
 type ListFieldsParams struct {
-	// Page ページ番号(1始まり)
-	Page Page `form:"page" json:"page"`
+	// Cursor 次ページ取得用カーソル(Base64エンコード)。省略時は先頭から取得
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// PageSize 1ページあたりの件数
 	PageSize *PageSize `form:"pageSize,omitempty" json:"pageSize,omitempty"`

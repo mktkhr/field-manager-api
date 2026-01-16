@@ -162,18 +162,11 @@ func (siw *ServerInterfaceWrapper) ListFields(c *gin.Context) {
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListFieldsParams
 
-	// ------------- Required query parameter "page" -------------
+	// ------------- Optional query parameter "cursor" -------------
 
-	if paramValue := c.Query("page"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandler(c, fmt.Errorf("Query argument page is required, but not found"), http.StatusBadRequest)
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "page", c.Request.URL.Query(), &params.Page)
+	err = runtime.BindQueryParameter("form", true, false, "cursor", c.Request.URL.Query(), &params.Cursor)
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter page: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter cursor: %w", err), http.StatusBadRequest)
 		return
 	}
 
