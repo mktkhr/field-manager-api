@@ -109,19 +109,20 @@ func (h *FieldHandler) validateAndNormalizeParams(params openapi.ListFieldsParam
 	if params.PageSize == nil {
 		pageSize = DefaultPageSize
 	} else {
-		pageSize = *params.PageSize
-		if pageSize < 1 {
+		ps := *params.PageSize
+		if ps < 1 {
 			return nil, 0, &ValidationError{
 				Field:   "pageSize",
 				Message: "ページサイズは1以上を指定してください",
 			}
 		}
-		if pageSize > MaxPageSize {
+		if ps > MaxPageSize {
 			return nil, 0, &ValidationError{
 				Field:   "pageSize",
 				Message: "ページサイズは1000以下を指定してください",
 			}
 		}
+		pageSize = ps
 	}
 
 	return cursor, pageSize, nil

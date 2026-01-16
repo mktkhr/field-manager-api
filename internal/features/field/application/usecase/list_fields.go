@@ -66,7 +66,7 @@ func NewListFieldsUseCase(
 // Execute は圃場一覧取得を実行する
 func (u *ListFieldsUseCase) Execute(ctx context.Context, input ListFieldsInput) (*ListFieldsOutput, error) {
 	// limit + 1 を取得して次ページの存在を確認する
-	limit := int32(input.PageSize + 1)
+	limit := input.PageSize + 1
 
 	// 圃場一覧取得
 	fields, err := u.fieldQuery.ListByCursor(ctx, input.Cursor, limit)

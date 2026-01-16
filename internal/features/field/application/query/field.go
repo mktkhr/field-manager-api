@@ -12,5 +12,5 @@ type FieldQuery interface {
 	// ListByCursor はカーソルベースで圃場一覧を取得する
 	// cursor: 前ページの最後の圃場のカーソル(nilの場合は先頭から)
 	// limit: 取得件数
-	ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int32) ([]*entity.Field, error)
+	ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int) ([]*entity.Field, error)
 }

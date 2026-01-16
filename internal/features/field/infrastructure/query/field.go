@@ -29,9 +29,15 @@ func NewFieldQuery(db *pgxpool.Pool) appQuery.FieldQuery {
 }
 
 // ListByCursor はカーソルベースで圃場一覧を取得する
-func (q *fieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int32) ([]*entity.Field, error) {
+func (q *fieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int) ([]*entity.Field, error) {
+	// limitの範囲チェック(1-1001: pageSize最大1000 + 次ページ確認用1件)
+	const maxLimit = 1001
+	if limit < 1 || limit > maxLimit {
+		return nil, fmt.Errorf("limitは1から%dの範囲で指定してください: %d", maxLimit, limit)
+	}
+
 	params := &sqlc.ListFieldsByCursorParams{
-		PageLimit: limit,
+		PageLimit: int32(limit), // 上記チェック済みのため安全
 	}
 
 	// カーソルが指定されている場合は設定
