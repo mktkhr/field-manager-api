@@ -50,13 +50,71 @@ func (q *fieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCurso
 
 	fields := make([]*entity.Field, len(rows))
 	for i, row := range rows {
-		field, err := q.toEntity(row)
+		field, err := q.toEntityFromCursorRow(row)
 		if err != nil {
 			return nil, fmt.Errorf("圃場エンティティ変換に失敗: %w", err)
 		}
 		fields[i] = field
 	}
 	return fields, nil
+}
+
+// toEntityFromCursorRow はListFieldsByCursorRowをエンティティに変換する
+func (q *fieldQuery) toEntityFromCursorRow(row *sqlc.ListFieldsByCursorRow) (*entity.Field, error) {
+	if row == nil {
+		return nil, nil
+	}
+
+	field := &entity.Field{
+		ID:          row.ID,
+		AreaSqm:     row.AreaSqm,
+		H3IndexRes3: row.H3IndexRes3,
+		H3IndexRes5: row.H3IndexRes5,
+		H3IndexRes7: row.H3IndexRes7,
+		H3IndexRes9: row.H3IndexRes9,
+		CityCode:    row.CityCode,
+		Name:        row.Name,
+	}
+
+	if row.SoilTypeID.Valid {
+		field.SoilTypeID = &row.SoilTypeID.UUID
+	}
+	if row.CreatedAt.Valid {
+		field.CreatedAt = row.CreatedAt.Time
+	}
+	if row.UpdatedAt.Valid {
+		field.UpdatedAt = row.UpdatedAt.Time
+	}
+	if row.CreatedBy.Valid {
+		field.CreatedBy = &row.CreatedBy.UUID
+	}
+	if row.UpdatedBy.Valid {
+		field.UpdatedBy = &row.UpdatedBy.UUID
+	}
+
+	// Geometry変換(interface{} -> *geom.Polygon)
+	if row.Geometry != nil {
+		geometry, err := q.parseGeometry(row.Geometry)
+		if err != nil {
+			return nil, fmt.Errorf("geometry解析に失敗: %w", err)
+		}
+		if polygon, ok := geometry.(*geom.Polygon); ok {
+			field.Geometry = polygon
+		}
+	}
+
+	// Centroid変換(interface{} -> *geom.Point)
+	if row.Centroid != nil {
+		centroid, err := q.parseGeometry(row.Centroid)
+		if err != nil {
+			return nil, fmt.Errorf("centroid解析に失敗: %w", err)
+		}
+		if point, ok := centroid.(*geom.Point); ok {
+			field.Centroid = point
+		}
+	}
+
+	return field, nil
 }
 
 // toEntity はSQLCモデルをエンティティに変換する
