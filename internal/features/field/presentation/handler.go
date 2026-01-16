@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/mktkhr/field-manager-api/internal/features/field/application/usecase"
+	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/generated/openapi"
 )
 
@@ -38,7 +39,7 @@ func (h *FieldHandler) ListFields(ctx context.Context, request openapi.ListField
 	params := request.Params
 
 	// パラメータバリデーション
-	page, pageSize, err := h.validateAndNormalizeParams(params)
+	cursor, pageSize, err := h.validateAndNormalizeParams(params)
 	if err != nil {
 		return openapi.ListFields400JSONResponse{
 			BadRequestJSONResponse: openapi.BadRequestJSONResponse{
@@ -53,7 +54,7 @@ func (h *FieldHandler) ListFields(ctx context.Context, request openapi.ListField
 
 	// ユースケース実行
 	output, err := h.listFieldsUC.Execute(ctx, usecase.ListFieldsInput{
-		Page:     page,
+		Cursor:   cursor,
 		PageSize: pageSize,
 	})
 	if err != nil {
@@ -81,11 +82,10 @@ func (h *FieldHandler) ListFields(ctx context.Context, request openapi.ListField
 			Fields: fields,
 		},
 		Meta: &openapi.ResponseMeta{
-			Pagination: openapi.PaginationMeta{
-				Total:      int(output.Pagination.Total),
-				Page:       output.Pagination.Page,
+			Pagination: openapi.CursorPaginationMeta{
+				NextCursor: output.Pagination.NextCursor,
+				HasMore:    output.Pagination.HasMore,
 				PageSize:   output.Pagination.PageSize,
-				TotalPages: output.Pagination.TotalPages,
 			},
 		},
 		Errors: nil,
@@ -93,15 +93,17 @@ func (h *FieldHandler) ListFields(ctx context.Context, request openapi.ListField
 }
 
 // validateAndNormalizeParams はパラメータをバリデーションして正規化する
-func (h *FieldHandler) validateAndNormalizeParams(params openapi.ListFieldsParams) (page, pageSize int, err error) {
-	// pageバリデーション(必須、1以上)
-	if params.Page < 1 {
-		return 0, 0, &ValidationError{
-			Field:   "page",
-			Message: "ページ番号は1以上を指定してください",
+func (h *FieldHandler) validateAndNormalizeParams(params openapi.ListFieldsParams) (cursor *entity.FieldCursor, pageSize int, err error) {
+	// cursorバリデーション(オプション)
+	if params.Cursor != nil && *params.Cursor != "" {
+		cursor, err = entity.DecodeFieldCursor(*params.Cursor)
+		if err != nil {
+			return nil, 0, &ValidationError{
+				Field:   "cursor",
+				Message: "カーソルの形式が不正です",
+			}
 		}
 	}
-	page = params.Page
 
 	// pageSizeバリデーション(オプション、デフォルト20、最大1000)
 	if params.PageSize == nil {
@@ -109,20 +111,20 @@ func (h *FieldHandler) validateAndNormalizeParams(params openapi.ListFieldsParam
 	} else {
 		pageSize = *params.PageSize
 		if pageSize < 1 {
-			return 0, 0, &ValidationError{
+			return nil, 0, &ValidationError{
 				Field:   "pageSize",
 				Message: "ページサイズは1以上を指定してください",
 			}
 		}
 		if pageSize > MaxPageSize {
-			return 0, 0, &ValidationError{
+			return nil, 0, &ValidationError{
 				Field:   "pageSize",
 				Message: "ページサイズは1000以下を指定してください",
 			}
 		}
 	}
 
-	return page, pageSize, nil
+	return cursor, pageSize, nil
 }
 
 // toOpenAPIField はUseCaseの出力をOpenAPIの型に変換する

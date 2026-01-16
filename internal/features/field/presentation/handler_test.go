@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/mktkhr/field-manager-api/internal/features/field/application/usecase"
+	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	"github.com/mktkhr/field-manager-api/internal/generated/openapi"
 )
 
@@ -65,57 +67,69 @@ func (s *FieldHandlerTestSuite) TestNewFieldHandler_Success() {
 func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_Success() {
 	pageSize := 50
 	params := openapi.ListFieldsParams{
-		Page:     1,
+		Cursor:   nil,
 		PageSize: &pageSize,
 	}
 
-	page, size, err := s.handler.validateAndNormalizeParams(params)
+	cursor, size, err := s.handler.validateAndNormalizeParams(params)
 	require.NoError(s.T(), err, "バリデーションでエラーが発生")
-	require.Equal(s.T(), 1, page, "ページ番号が一致しません")
+	require.Nil(s.T(), cursor, "カーソルがnilではありません")
+	require.Equal(s.T(), 50, size, "ページサイズが一致しません")
+}
+
+// TestFieldHandler_validateAndNormalizeParams_WithCursor はカーソル付きパラメータでバリデーションが通ることをテスト
+func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_WithCursor() {
+	// 有効なカーソルを作成
+	validCursor := entity.NewFieldCursor(
+		time.Now(),
+		uuid.New(),
+	)
+	encodedCursor, err := validCursor.Encode()
+	require.NoError(s.T(), err, "カーソルのエンコードに失敗")
+
+	pageSize := 50
+	params := openapi.ListFieldsParams{
+		Cursor:   &encodedCursor,
+		PageSize: &pageSize,
+	}
+
+	cursor, size, err := s.handler.validateAndNormalizeParams(params)
+	require.NoError(s.T(), err, "バリデーションでエラーが発生")
+	require.NotNil(s.T(), cursor, "カーソルがnilです")
 	require.Equal(s.T(), 50, size, "ページサイズが一致しません")
 }
 
 // TestFieldHandler_validateAndNormalizeParams_DefaultPageSize はpageSizeがnilの場合デフォルト値が使用されることをテスト
 func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_DefaultPageSize() {
 	params := openapi.ListFieldsParams{
-		Page:     1,
+		Cursor:   nil,
 		PageSize: nil,
 	}
 
-	page, size, err := s.handler.validateAndNormalizeParams(params)
+	cursor, size, err := s.handler.validateAndNormalizeParams(params)
 	require.NoError(s.T(), err, "バリデーションでエラーが発生")
-	require.Equal(s.T(), 1, page, "ページ番号が一致しません")
+	require.Nil(s.T(), cursor, "カーソルがnilではありません")
 	require.Equal(s.T(), DefaultPageSize, size, "デフォルトページサイズが使用されていません")
 }
 
-// TestFieldHandler_validateAndNormalizeParams_ValidationError_PageZero はpage=0でエラーになることをテスト
-func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_ValidationError_PageZero() {
+// TestFieldHandler_validateAndNormalizeParams_ValidationError_InvalidCursor は不正なカーソルでエラーになることをテスト
+func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_ValidationError_InvalidCursor() {
+	invalidCursor := "invalid-cursor-data"
 	params := openapi.ListFieldsParams{
-		Page:     0,
+		Cursor:   &invalidCursor,
 		PageSize: nil,
 	}
 
 	_, _, err := s.handler.validateAndNormalizeParams(params)
-	require.Error(s.T(), err, "page=0でエラーが返されませんでした")
-	require.Contains(s.T(), err.Error(), "ページ番号は1以上", "エラーメッセージが期待値と異なります")
-}
-
-// TestFieldHandler_validateAndNormalizeParams_ValidationError_PageNegative はpage=-1でエラーになることをテスト
-func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_ValidationError_PageNegative() {
-	params := openapi.ListFieldsParams{
-		Page:     -1,
-		PageSize: nil,
-	}
-
-	_, _, err := s.handler.validateAndNormalizeParams(params)
-	require.Error(s.T(), err, "page=-1でエラーが返されませんでした")
+	require.Error(s.T(), err, "不正なカーソルでエラーが返されませんでした")
+	require.Contains(s.T(), err.Error(), "カーソルの形式が不正", "エラーメッセージが期待値と異なります")
 }
 
 // TestFieldHandler_validateAndNormalizeParams_ValidationError_PageSizeZero はpageSize=0でエラーになることをテスト
 func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_ValidationError_PageSizeZero() {
 	pageSize := 0
 	params := openapi.ListFieldsParams{
-		Page:     1,
+		Cursor:   nil,
 		PageSize: &pageSize,
 	}
 
@@ -128,7 +142,7 @@ func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_Vali
 func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_ValidationError_PageSizeNegative() {
 	pageSize := -1
 	params := openapi.ListFieldsParams{
-		Page:     1,
+		Cursor:   nil,
 		PageSize: &pageSize,
 	}
 
@@ -140,7 +154,7 @@ func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_Vali
 func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_ValidationError_PageSizeOverMax() {
 	pageSize := 1001
 	params := openapi.ListFieldsParams{
-		Page:     1,
+		Cursor:   nil,
 		PageSize: &pageSize,
 	}
 
@@ -153,13 +167,13 @@ func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_Vali
 func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_BoundaryValue_PageSizeOne() {
 	pageSize := 1
 	params := openapi.ListFieldsParams{
-		Page:     1,
+		Cursor:   nil,
 		PageSize: &pageSize,
 	}
 
-	page, size, err := s.handler.validateAndNormalizeParams(params)
+	cursor, size, err := s.handler.validateAndNormalizeParams(params)
 	require.NoError(s.T(), err, "pageSize=1でエラーが発生")
-	require.Equal(s.T(), 1, page, "ページ番号が一致しません")
+	require.Nil(s.T(), cursor, "カーソルがnilではありません")
 	require.Equal(s.T(), 1, size, "ページサイズが一致しません")
 }
 
@@ -167,13 +181,13 @@ func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_Boun
 func (s *FieldHandlerTestSuite) TestFieldHandler_validateAndNormalizeParams_BoundaryValue_PageSizeMax() {
 	pageSize := 1000
 	params := openapi.ListFieldsParams{
-		Page:     1,
+		Cursor:   nil,
 		PageSize: &pageSize,
 	}
 
-	page, size, err := s.handler.validateAndNormalizeParams(params)
+	cursor, size, err := s.handler.validateAndNormalizeParams(params)
 	require.NoError(s.T(), err, "pageSize=1000でエラーが発生")
-	require.Equal(s.T(), 1, page, "ページ番号が一致しません")
+	require.Nil(s.T(), cursor, "カーソルがnilではありません")
 	require.Equal(s.T(), 1000, size, "ページサイズが一致しません")
 }
 
@@ -238,7 +252,7 @@ func (s *FieldHandlerTestSuite) TestFieldHandler_toOpenAPIField_EmptyGeometry() 
 // ValidationErrorインターフェースのテスト
 func (s *FieldHandlerTestSuite) TestValidationError_Error() {
 	err := &ValidationError{
-		Field:   "page",
+		Field:   "cursor",
 		Message: "テストエラーメッセージ",
 	}
 
@@ -254,17 +268,22 @@ type testableFieldHandler struct {
 func (h *testableFieldHandler) ListFields(ctx context.Context, request openapi.ListFieldsRequestObject) (openapi.ListFieldsResponseObject, error) {
 	params := request.Params
 
-	// pageバリデーション
-	if params.Page < 1 {
-		return openapi.ListFields400JSONResponse{
-			BadRequestJSONResponse: openapi.BadRequestJSONResponse{
-				Data: nil,
-				Errors: &[]openapi.Error{{
-					Code:    "invalid_parameter",
-					Message: "ページ番号は1以上を指定してください",
-				}},
-			},
-		}, nil
+	// cursorバリデーション
+	var cursor *entity.FieldCursor
+	if params.Cursor != nil && *params.Cursor != "" {
+		var err error
+		cursor, err = entity.DecodeFieldCursor(*params.Cursor)
+		if err != nil {
+			return openapi.ListFields400JSONResponse{
+				BadRequestJSONResponse: openapi.BadRequestJSONResponse{
+					Data: nil,
+					Errors: &[]openapi.Error{{
+						Code:    "invalid_parameter",
+						Message: "カーソルの形式が不正です",
+					}},
+				},
+			}, nil
+		}
 	}
 
 	// pageSizeバリデーション
@@ -297,7 +316,7 @@ func (h *testableFieldHandler) ListFields(ctx context.Context, request openapi.L
 
 	// ユースケース実行
 	output, err := h.executeFunc(ctx, usecase.ListFieldsInput{
-		Page:     params.Page,
+		Cursor:   cursor,
 		PageSize: pageSize,
 	})
 	if err != nil {
@@ -333,11 +352,10 @@ func (h *testableFieldHandler) ListFields(ctx context.Context, request openapi.L
 	return openapi.ListFields200JSONResponse{
 		Data: &openapi.FieldListData{Fields: fields},
 		Meta: &openapi.ResponseMeta{
-			Pagination: openapi.PaginationMeta{
-				Total:      int(output.Pagination.Total),
-				Page:       output.Pagination.Page,
+			Pagination: openapi.CursorPaginationMeta{
+				NextCursor: output.Pagination.NextCursor,
+				HasMore:    output.Pagination.HasMore,
 				PageSize:   output.Pagination.PageSize,
-				TotalPages: output.Pagination.TotalPages,
 			},
 		},
 		Errors: nil,
@@ -362,9 +380,10 @@ func TestFieldHandlerListFieldsSuite(t *testing.T) {
 func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Success() {
 	ctx := context.Background()
 	fieldID := uuid.New()
+	nextCursor := "next-cursor-value"
 
 	handler := &testableFieldHandler{
-		executeFunc: func(ctx context.Context, input usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
+		executeFunc: func(_ context.Context, _ usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
 			return &usecase.ListFieldsOutput{
 				Fields: []usecase.FieldOutput{
 					{
@@ -375,11 +394,10 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Success() 
 						Centroid: usecase.Coordinate{Lat: 35.0, Lng: 139.0},
 					},
 				},
-				Pagination: usecase.PaginationOutput{
-					Total:      1,
-					Page:       1,
+				Pagination: usecase.CursorPaginationOutput{
+					NextCursor: &nextCursor,
+					HasMore:    true,
 					PageSize:   20,
-					TotalPages: 1,
 				},
 			}, nil
 		},
@@ -387,7 +405,7 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Success() 
 	}
 
 	request := openapi.ListFieldsRequestObject{
-		Params: openapi.ListFieldsParams{Page: 1, PageSize: nil},
+		Params: openapi.ListFieldsParams{Cursor: nil, PageSize: nil},
 	}
 
 	response, err := handler.ListFields(ctx, request)
@@ -399,7 +417,8 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Success() 
 	require.Len(s.T(), resp200.Data.Fields, 1, "フィールド数が期待値と異なります")
 	require.Equal(s.T(), fieldID, resp200.Data.Fields[0].Id, "フィールドIDが一致しません")
 	require.NotNil(s.T(), resp200.Meta, "Metaがnilです")
-	require.Equal(s.T(), 1, resp200.Meta.Pagination.Total, "総件数が一致しません")
+	require.True(s.T(), resp200.Meta.Pagination.HasMore, "HasMoreがtrueではありません")
+	require.NotNil(s.T(), resp200.Meta.Pagination.NextCursor, "NextCursorがnilです")
 }
 
 // TestFieldHandler_ListFields_Success_EmptyResult は結果が0件でも正常に動作することをテスト
@@ -407,14 +426,13 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Success_Em
 	ctx := context.Background()
 
 	handler := &testableFieldHandler{
-		executeFunc: func(ctx context.Context, input usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
+		executeFunc: func(_ context.Context, _ usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
 			return &usecase.ListFieldsOutput{
 				Fields: []usecase.FieldOutput{},
-				Pagination: usecase.PaginationOutput{
-					Total:      0,
-					Page:       1,
+				Pagination: usecase.CursorPaginationOutput{
+					NextCursor: nil,
+					HasMore:    false,
 					PageSize:   20,
-					TotalPages: 0,
 				},
 			}, nil
 		},
@@ -422,7 +440,7 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Success_Em
 	}
 
 	request := openapi.ListFieldsRequestObject{
-		Params: openapi.ListFieldsParams{Page: 1, PageSize: nil},
+		Params: openapi.ListFieldsParams{Cursor: nil, PageSize: nil},
 	}
 
 	response, err := handler.ListFields(ctx, request)
@@ -432,22 +450,23 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Success_Em
 	require.True(s.T(), ok, "200レスポンスを期待")
 	require.NotNil(s.T(), resp200.Data, "Dataがnilです")
 	require.Empty(s.T(), resp200.Data.Fields, "フィールドリストが空ではありません")
-	require.Equal(s.T(), 0, resp200.Meta.Pagination.Total, "総件数が0ではありません")
+	require.False(s.T(), resp200.Meta.Pagination.HasMore, "HasMoreがfalseではありません")
 }
 
-// TestFieldHandler_ListFields_ValidationError_PageZero はpage=0で400エラーになることをテスト
-func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_ValidationError_PageZero() {
+// TestFieldHandler_ListFields_ValidationError_InvalidCursor は不正なカーソルで400エラーになることをテスト
+func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_ValidationError_InvalidCursor() {
 	ctx := context.Background()
 
 	handler := &testableFieldHandler{
-		executeFunc: func(ctx context.Context, input usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
+		executeFunc: func(_ context.Context, _ usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
 			return nil, nil
 		},
 		logger: s.logger,
 	}
 
+	invalidCursor := "invalid-cursor"
 	request := openapi.ListFieldsRequestObject{
-		Params: openapi.ListFieldsParams{Page: 0, PageSize: nil},
+		Params: openapi.ListFieldsParams{Cursor: &invalidCursor, PageSize: nil},
 	}
 
 	response, err := handler.ListFields(ctx, request)
@@ -464,7 +483,7 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Validation
 	ctx := context.Background()
 
 	handler := &testableFieldHandler{
-		executeFunc: func(ctx context.Context, input usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
+		executeFunc: func(_ context.Context, _ usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
 			return nil, nil
 		},
 		logger: s.logger,
@@ -472,7 +491,7 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_Validation
 
 	pageSize := 1001
 	request := openapi.ListFieldsRequestObject{
-		Params: openapi.ListFieldsParams{Page: 1, PageSize: &pageSize},
+		Params: openapi.ListFieldsParams{Cursor: nil, PageSize: &pageSize},
 	}
 
 	response, err := handler.ListFields(ctx, request)
@@ -488,14 +507,14 @@ func (s *FieldHandlerListFieldsTestSuite) TestFieldHandler_ListFields_UseCaseErr
 	ctx := context.Background()
 
 	handler := &testableFieldHandler{
-		executeFunc: func(ctx context.Context, input usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
+		executeFunc: func(_ context.Context, _ usecase.ListFieldsInput) (*usecase.ListFieldsOutput, error) {
 			return nil, errors.New("データベースエラー")
 		},
 		logger: s.logger,
 	}
 
 	request := openapi.ListFieldsRequestObject{
-		Params: openapi.ListFieldsParams{Page: 1, PageSize: nil},
+		Params: openapi.ListFieldsParams{Cursor: nil, PageSize: nil},
 	}
 
 	response, err := handler.ListFields(ctx, request)
