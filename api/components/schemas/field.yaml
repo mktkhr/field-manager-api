@@ -99,10 +99,12 @@ FieldListResponse:
     - errors
   properties:
     data:
+      type: object
       allOf:
         - $ref: "./field.yaml#/FieldListData"
       nullable: true
     meta:
+      type: object
       allOf:
         - $ref: "./field.yaml#/ResponseMeta"
       nullable: true
@@ -119,6 +121,7 @@ FieldResponse:
     - errors
   properties:
     data:
+      type: object
       allOf:
         - $ref: "./field.yaml#/Field"
       nullable: true

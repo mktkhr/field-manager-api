@@ -44,6 +44,7 @@ ClusterListResponse:
     - errors
   properties:
     data:
+      type: object
       allOf:
         - $ref: "./cluster.yaml#/ClusterListData"
       nullable: true
@@ -74,6 +75,7 @@ RecalculateResponse:
     - errors
   properties:
     data:
+      type: object
       allOf:
         - $ref: "./cluster.yaml#/RecalculateData"
       nullable: true

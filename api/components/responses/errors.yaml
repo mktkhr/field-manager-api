@@ -6,6 +6,7 @@ ErrorResponse:
     - errors
   properties:
     data:
+      type: object
       nullable: true
     errors:
       type: array

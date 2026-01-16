@@ -29,6 +29,7 @@ ImportResponse:
     - errors
   properties:
     data:
+      type: object
       allOf:
         - $ref: "./import.yaml#/ImportData"
       nullable: true
@@ -95,6 +96,7 @@ ImportStatusResponse:
     - errors
   properties:
     data:
+      type: object
       allOf:
         - $ref: "./import.yaml#/ImportStatusData"
       nullable: true
