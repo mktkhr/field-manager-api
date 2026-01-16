@@ -9,9 +9,11 @@ import (
 	"log/slog"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
 	importdto "github.com/mktkhr/field-manager-api/internal/features/import/domain/dto"
 	"github.com/mktkhr/field-manager-api/internal/generated/sqlc"
 	"github.com/stretchr/testify/require"
@@ -89,8 +91,8 @@ func TestFieldQueryIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(FieldQueryIntegrationTestSuite))
 }
 
-// createTestField はテスト用の圃場を作成する
-func (s *FieldQueryIntegrationTestSuite) createTestField(fieldID uuid.UUID, cityCode string, coords [][]float64) {
+// createTestFieldWithTimestamp はテスト用の圃場を作成する(タイムスタンプ指定可能)
+func (s *FieldQueryIntegrationTestSuite) createTestFieldWithTimestamp(fieldID uuid.UUID, cityCode string, coords [][]float64, createdAt time.Time) {
 	ctx := context.Background()
 
 	// ポリゴン作成
@@ -127,10 +129,19 @@ func (s *FieldQueryIntegrationTestSuite) createTestField(fieldID uuid.UUID, city
 		CityCode:    cityCode,
 	})
 	require.NoError(s.T(), err, "圃場挿入に失敗")
+
+	// created_atを指定値に更新
+	_, err = testDB.Exec(ctx, "UPDATE fields SET created_at = $1 WHERE id = $2", createdAt, fieldID)
+	require.NoError(s.T(), err, "created_at更新に失敗")
 }
 
-// TestFieldQuery_List_Integration は実際のDBから圃場一覧を取得できることをテスト
-func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration() {
+// createTestField はテスト用の圃場を作成する
+func (s *FieldQueryIntegrationTestSuite) createTestField(fieldID uuid.UUID, cityCode string, coords [][]float64) {
+	s.createTestFieldWithTimestamp(fieldID, cityCode, coords, time.Now())
+}
+
+// TestFieldQuery_ListByCursor_Integration は実際のDBから圃場一覧を取得できることをテスト
+func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_ListByCursor_Integration() {
 	ctx := context.Background()
 
 	// テストデータ作成
@@ -138,16 +149,16 @@ func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration() {
 	coords := [][]float64{{139.0, 35.0}, {139.1, 35.0}, {139.1, 35.1}, {139.0, 35.1}, {139.0, 35.0}}
 	s.createTestField(fieldID, "12345", coords)
 
-	// 一覧取得
-	fields, err := s.query.List(ctx, 10, 0)
-	require.NoError(s.T(), err, "List実行時にエラーが発生")
+	// カーソルなしで一覧取得
+	fields, err := s.query.ListByCursor(ctx, nil, 10)
+	require.NoError(s.T(), err, "ListByCursor実行時にエラーが発生")
 	require.Len(s.T(), fields, 1, "取得件数が期待値と異なります")
 	require.Equal(s.T(), fieldID, fields[0].ID, "圃場IDが一致しません")
 	require.Equal(s.T(), "12345", fields[0].CityCode, "市区町村コードが一致しません")
 }
 
-// TestFieldQuery_List_Integration_GeometryConversion はポリゴン座標が正しい順序で変換されることをテスト
-func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_GeometryConversion() {
+// TestFieldQuery_ListByCursor_Integration_GeometryConversion はポリゴン座標が正しい順序で変換されることをテスト
+func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_ListByCursor_Integration_GeometryConversion() {
 	ctx := context.Background()
 
 	// テストデータ作成(経度139.0-139.1、緯度35.0-35.1の四角形)
@@ -162,8 +173,8 @@ func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_Geometr
 	s.createTestField(fieldID, "12345", coords)
 
 	// 一覧取得
-	fields, err := s.query.List(ctx, 10, 0)
-	require.NoError(s.T(), err, "List実行時にエラーが発生")
+	fields, err := s.query.ListByCursor(ctx, nil, 10)
+	require.NoError(s.T(), err, "ListByCursor実行時にエラーが発生")
 	require.Len(s.T(), fields, 1, "取得件数が期待値と異なります")
 
 	// Geometry変換の検証
@@ -185,51 +196,49 @@ func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_Geometr
 	require.InDelta(s.T(), 35.04, fields[0].Centroid.Y(), 0.01, "重心の緯度(Y)が一致しません")
 }
 
-// TestFieldQuery_Count_Integration は実際のDBから圃場総数を取得できることをテスト
-func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_Count_Integration() {
+// TestFieldQuery_ListByCursor_Integration_CursorPagination はカーソルベースページネーションが正しく動作することをテスト
+func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_ListByCursor_Integration_CursorPagination() {
 	ctx := context.Background()
 
-	// テストデータ作成
+	// テストデータ作成(5件、created_atを明示的に設定)
 	coords := [][]float64{{139.0, 35.0}, {139.1, 35.0}, {139.1, 35.1}, {139.0, 35.1}, {139.0, 35.0}}
-	s.createTestField(uuid.New(), "12345", coords)
-	s.createTestField(uuid.New(), "12346", coords)
-	s.createTestField(uuid.New(), "12347", coords)
-
-	// 総数取得
-	count, err := s.query.Count(ctx)
-	require.NoError(s.T(), err, "Count実行時にエラーが発生")
-	require.Equal(s.T(), int64(3), count, "総件数が期待値と異なります")
-}
-
-// TestFieldQuery_List_Integration_Pagination はページネーションが正しく動作することをテスト
-func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_Pagination() {
-	ctx := context.Background()
-
-	// テストデータ作成(5件)
-	coords := [][]float64{{139.0, 35.0}, {139.1, 35.0}, {139.1, 35.1}, {139.0, 35.1}, {139.0, 35.0}}
+	now := time.Now()
+	fieldIDs := make([]uuid.UUID, 5)
 	for i := 0; i < 5; i++ {
-		s.createTestField(uuid.New(), fmt.Sprintf("1234%d", i), coords)
+		fieldIDs[i] = uuid.New()
+		// created_atを1秒ずつずらして明確な順序を作る(新しい順: 4, 3, 2, 1, 0)
+		createdAt := now.Add(-time.Duration(i) * time.Second)
+		s.createTestFieldWithTimestamp(fieldIDs[i], fmt.Sprintf("1234%d", i), coords, createdAt)
 	}
 
-	// 1ページ目(limit=2, offset=0)
-	fields1, err := s.query.List(ctx, 2, 0)
-	require.NoError(s.T(), err, "List(limit=2, offset=0)実行時にエラーが発生")
+	// 1ページ目(limit=2, cursor=nil)
+	fields1, err := s.query.ListByCursor(ctx, nil, 2)
+	require.NoError(s.T(), err, "ListByCursor(limit=2, cursor=nil)実行時にエラーが発生")
 	require.Len(s.T(), fields1, 2, "1ページ目の取得件数が期待値と異なります")
+	// 新しい順(created_at DESC)なので、fieldIDs[0]が最初に来る
+	require.Equal(s.T(), fieldIDs[0], fields1[0].ID, "1ページ目1件目のIDが期待値と異なります")
+	require.Equal(s.T(), fieldIDs[1], fields1[1].ID, "1ページ目2件目のIDが期待値と異なります")
 
-	// 2ページ目(limit=2, offset=2)
-	fields2, err := s.query.List(ctx, 2, 2)
-	require.NoError(s.T(), err, "List(limit=2, offset=2)実行時にエラーが発生")
+	// 2ページ目(カーソルを使用)
+	cursor1 := entity.NewFieldCursor(fields1[1].CreatedAt, fields1[1].ID)
+	fields2, err := s.query.ListByCursor(ctx, cursor1, 2)
+	require.NoError(s.T(), err, "ListByCursor(2ページ目)実行時にエラーが発生")
 	require.Len(s.T(), fields2, 2, "2ページ目の取得件数が期待値と異なります")
+	require.Equal(s.T(), fieldIDs[2], fields2[0].ID, "2ページ目1件目のIDが期待値と異なります")
+	require.Equal(s.T(), fieldIDs[3], fields2[1].ID, "2ページ目2件目のIDが期待値と異なります")
 
-	// 3ページ目(limit=2, offset=4)
-	fields3, err := s.query.List(ctx, 2, 4)
-	require.NoError(s.T(), err, "List(limit=2, offset=4)実行時にエラーが発生")
+	// 3ページ目(カーソルを使用)
+	cursor2 := entity.NewFieldCursor(fields2[1].CreatedAt, fields2[1].ID)
+	fields3, err := s.query.ListByCursor(ctx, cursor2, 2)
+	require.NoError(s.T(), err, "ListByCursor(3ページ目)実行時にエラーが発生")
 	require.Len(s.T(), fields3, 1, "3ページ目の取得件数が期待値と異なります")
+	require.Equal(s.T(), fieldIDs[4], fields3[0].ID, "3ページ目1件目のIDが期待値と異なります")
 
-	// 範囲外(limit=2, offset=10)
-	fields4, err := s.query.List(ctx, 2, 10)
-	require.NoError(s.T(), err, "List(limit=2, offset=10)実行時にエラーが発生")
-	require.Len(s.T(), fields4, 0, "範囲外の取得件数が0ではありません")
+	// 4ページ目(データなし)
+	cursor3 := entity.NewFieldCursor(fields3[0].CreatedAt, fields3[0].ID)
+	fields4, err := s.query.ListByCursor(ctx, cursor3, 2)
+	require.NoError(s.T(), err, "ListByCursor(4ページ目)実行時にエラーが発生")
+	require.Len(s.T(), fields4, 0, "4ページ目の取得件数が0ではありません")
 
 	// 各ページのIDが重複していないことを確認
 	allIDs := make(map[uuid.UUID]bool)
@@ -245,28 +254,52 @@ func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_Paginat
 	}
 }
 
-// TestFieldQuery_List_Integration_Empty は圃場が0件の場合も正常に動作することをテスト
-func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_Empty() {
+// TestFieldQuery_ListByCursor_Integration_SameCreatedAt は同一created_atでもIDで正しくソートされることをテスト
+func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_ListByCursor_Integration_SameCreatedAt() {
+	ctx := context.Background()
+
+	// テストデータ作成(3件、同一created_at)
+	coords := [][]float64{{139.0, 35.0}, {139.1, 35.0}, {139.1, 35.1}, {139.0, 35.1}, {139.0, 35.0}}
+	sameTime := time.Now()
+	fieldIDs := make([]uuid.UUID, 3)
+	for i := 0; i < 3; i++ {
+		fieldIDs[i] = uuid.New()
+		s.createTestFieldWithTimestamp(fieldIDs[i], fmt.Sprintf("1234%d", i), coords, sameTime)
+	}
+
+	// 全件取得して順序を確認
+	fields, err := s.query.ListByCursor(ctx, nil, 10)
+	require.NoError(s.T(), err, "ListByCursor実行時にエラーが発生")
+	require.Len(s.T(), fields, 3, "取得件数が期待値と異なります")
+
+	// IDの降順でソートされていることを確認
+	for i := 0; i < len(fields)-1; i++ {
+		// UUIDの文字列比較(降順)
+		require.Greater(s.T(), fields[i].ID.String(), fields[i+1].ID.String(),
+			"ID順序が降順ではありません(index %d, %d)", i, i+1)
+	}
+
+	// カーソルを使用して次ページを取得
+	cursor := entity.NewFieldCursor(fields[0].CreatedAt, fields[0].ID)
+	fields2, err := s.query.ListByCursor(ctx, cursor, 10)
+	require.NoError(s.T(), err, "ListByCursor(カーソル指定)実行時にエラーが発生")
+	require.Len(s.T(), fields2, 2, "カーソル以降の取得件数が期待値と異なります")
+	require.Equal(s.T(), fields[1].ID, fields2[0].ID, "カーソル後の1件目が期待値と異なります")
+	require.Equal(s.T(), fields[2].ID, fields2[1].ID, "カーソル後の2件目が期待値と異なります")
+}
+
+// TestFieldQuery_ListByCursor_Integration_Empty は圃場が0件の場合も正常に動作することをテスト
+func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_ListByCursor_Integration_Empty() {
 	ctx := context.Background()
 
 	// データなしで一覧取得
-	fields, err := s.query.List(ctx, 10, 0)
-	require.NoError(s.T(), err, "List実行時にエラーが発生")
+	fields, err := s.query.ListByCursor(ctx, nil, 10)
+	require.NoError(s.T(), err, "ListByCursor実行時にエラーが発生")
 	require.Empty(s.T(), fields, "圃場リストが空ではありません")
 }
 
-// TestFieldQuery_Count_Integration_Empty は圃場が0件の場合のカウントをテスト
-func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_Count_Integration_Empty() {
-	ctx := context.Background()
-
-	// データなしで総数取得
-	count, err := s.query.Count(ctx)
-	require.NoError(s.T(), err, "Count実行時にエラーが発生")
-	require.Equal(s.T(), int64(0), count, "総件数が0ではありません")
-}
-
-// TestFieldQuery_List_Integration_WithSoilType は土壌タイプIDを持つ圃場が正しく取得できることをテスト
-func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_WithSoilType() {
+// TestFieldQuery_ListByCursor_Integration_WithSoilType は土壌タイプIDを持つ圃場が正しく取得できることをテスト
+func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_ListByCursor_Integration_WithSoilType() {
 	ctx := context.Background()
 
 	// 土壌タイプを作成
@@ -313,8 +346,8 @@ func (s *FieldQueryIntegrationTestSuite) TestFieldQuery_List_Integration_WithSoi
 	require.NoError(s.T(), err, "圃場挿入に失敗")
 
 	// 一覧取得
-	fields, err := s.query.List(ctx, 10, 0)
-	require.NoError(s.T(), err, "List実行時にエラーが発生")
+	fields, err := s.query.ListByCursor(ctx, nil, 10)
+	require.NoError(s.T(), err, "ListByCursor実行時にエラーが発生")
 	require.Len(s.T(), fields, 1, "取得件数が期待値と異なります")
 	require.NotNil(s.T(), fields[0].SoilTypeID, "SoilTypeIDがnilです")
 	require.Equal(s.T(), soilType.ID, *fields[0].SoilTypeID, "SoilTypeIDが一致しません")

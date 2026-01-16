@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	appQuery "github.com/mktkhr/field-manager-api/internal/features/field/application/query"
 	"github.com/mktkhr/field-manager-api/internal/features/field/domain/entity"
@@ -27,12 +28,22 @@ func NewFieldQuery(db *pgxpool.Pool) appQuery.FieldQuery {
 	}
 }
 
-// List は圃場一覧を取得する
-func (q *fieldQuery) List(ctx context.Context, limit, offset int32) ([]*entity.Field, error) {
-	rows, err := q.queries.ListFields(ctx, &sqlc.ListFieldsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
+// ListByCursor はカーソルベースで圃場一覧を取得する
+func (q *fieldQuery) ListByCursor(ctx context.Context, cursor *entity.FieldCursor, limit int32) ([]*entity.Field, error) {
+	params := &sqlc.ListFieldsByCursorParams{
+		PageLimit: limit,
+	}
+
+	// カーソルが指定されている場合は設定
+	if cursor != nil {
+		params.CursorCreatedAt = pgtype.Timestamptz{
+			Time:  cursor.CreatedAt,
+			Valid: true,
+		}
+		params.CursorID = cursor.ID
+	}
+
+	rows, err := q.queries.ListFieldsByCursor(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("圃場一覧の取得に失敗: %w", err)
 	}
@@ -46,15 +57,6 @@ func (q *fieldQuery) List(ctx context.Context, limit, offset int32) ([]*entity.F
 		fields[i] = field
 	}
 	return fields, nil
-}
-
-// Count は圃場の総数を取得する
-func (q *fieldQuery) Count(ctx context.Context) (int64, error) {
-	count, err := q.queries.CountFields(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("圃場総数の取得に失敗: %w", err)
-	}
-	return count, nil
 }
 
 // toEntity はSQLCモデルをエンティティに変換する
