@@ -12,6 +12,14 @@ import (
 	"github.com/twpayne/go-geom/encoding/wkb"
 )
 
+// h3ColumnMap は解像度からH3カラム名へのマッピング(SQLインジェクション防止の許可リスト)
+var h3ColumnMap = map[int]string{
+	3: "h3_index_res3",
+	5: "h3_index_res5",
+	7: "h3_index_res7",
+	9: "h3_index_res9",
+}
+
 // fieldSearchQuery はFieldSearchQueryの実装
 type fieldSearchQuery struct {
 	db *pgxpool.Pool
@@ -88,18 +96,11 @@ func (q *fieldSearchQuery) SearchByBBox(ctx context.Context, bbox *entity.Boundi
 
 // getH3ColumnName は解像度に対応するH3インデックスカラム名を返す
 func (q *fieldSearchQuery) getH3ColumnName(resolution int) (string, error) {
-	switch resolution {
-	case 3:
-		return "h3_index_res3", nil
-	case 5:
-		return "h3_index_res5", nil
-	case 7:
-		return "h3_index_res7", nil
-	case 9:
-		return "h3_index_res9", nil
-	default:
+	column, ok := h3ColumnMap[resolution]
+	if !ok {
 		return "", fmt.Errorf("サポートされていないH3解像度: %d(サポート: 3, 5, 7, 9)", resolution)
 	}
+	return column, nil
 }
 
 // scanRow は行をSearchedFieldエンティティにスキャンする
