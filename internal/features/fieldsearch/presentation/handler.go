@@ -4,6 +4,7 @@ package presentation
 import (
 	"context"
 	"log/slog"
+	"strings"
 
 	"github.com/mktkhr/field-manager-api/internal/features/fieldsearch/application/usecase"
 	"github.com/mktkhr/field-manager-api/internal/generated/openapi"
@@ -128,22 +129,7 @@ func isValidationError(err error) bool {
 	}
 
 	for _, keyword := range validationKeywords {
-		if contains(errMsg, keyword) {
-			return true
-		}
-	}
-	return false
-}
-
-// contains は文字列に部分文字列が含まれるかを判定する
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || findSubstring(s, substr))
-}
-
-// findSubstring は文字列に部分文字列が含まれるかを検索する
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
+		if strings.Contains(errMsg, keyword) {
 			return true
 		}
 	}
