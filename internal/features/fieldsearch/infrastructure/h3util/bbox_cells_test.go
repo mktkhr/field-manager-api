@@ -157,3 +157,36 @@ func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_BoundaryValue_Resolutio
 	require.NoError(s.T(), err, "解像度15でエラーが発生")
 	require.NotEmpty(s.T(), cells, "H3セルが空です")
 }
+
+// TestCalculateCells_Success_VerySmallBBox はH3セルより小さいBBoxでもセルが返されることをテスト
+// PolygonToCellsExperimentalが空を返す場合のフォールバックロジックを検証
+func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_Success_VerySmallBBox() {
+	// 非常に小さな範囲(約200m四方) - H3 res9セル(約0.1km²)より小さい
+	// 新潟県の圃場データが存在する範囲
+	bbox, err := entity.NewBoundingBox(37.084, 138.260, 37.086, 138.263)
+	require.NoError(s.T(), err, "BoundingBox作成に失敗")
+
+	// resolution=9で計算(この範囲ではPolygonToCellsExperimentalが空を返す可能性がある)
+	cells, err := s.calculator.CalculateCells(bbox, 9)
+
+	require.NoError(s.T(), err, "H3セル計算でエラーが発生")
+	require.NotEmpty(s.T(), cells, "小さなBBoxでもH3セルが取得できるべき(フォールバックロジック)")
+
+	// 小さな範囲なので、4隅+中心から計算しても重複排除後は1-5セル程度のはず
+	require.LessOrEqual(s.T(), len(cells), 5, "小さなBBoxのH3セル数が多すぎます")
+}
+
+// TestCalculateCells_Success_TinyBBox は極小BBoxでもセルが返されることをテスト
+func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_Success_TinyBBox() {
+	// 極小範囲(約10m四方)
+	bbox, err := entity.NewBoundingBox(35.68000, 139.70000, 35.68010, 139.70010)
+	require.NoError(s.T(), err, "BoundingBox作成に失敗")
+
+	cells, err := s.calculator.CalculateCells(bbox, 9)
+
+	require.NoError(s.T(), err, "H3セル計算でエラーが発生")
+	require.NotEmpty(s.T(), cells, "極小BBoxでもH3セルが取得できるべき")
+
+	// 極小範囲なので、すべての点が同じセルに入る可能性が高い
+	require.LessOrEqual(s.T(), len(cells), 2, "極小BBoxのH3セル数は1-2であるべき")
+}

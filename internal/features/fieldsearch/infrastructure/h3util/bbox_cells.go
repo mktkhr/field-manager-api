@@ -45,11 +45,53 @@ func (c *BBoxCellCalculator) CalculateCells(bbox *entity.BoundingBox, resolution
 		return nil, fmt.Errorf("H3セルの計算に失敗: %w", err)
 	}
 
-	// Cell -> string変換
-	cellStrings := make([]string, len(cells))
-	for i, cell := range cells {
-		cellStrings[i] = cell.String()
+	// 重複排除用のマップ
+	cellSet := make(map[string]struct{})
+	for _, cell := range cells {
+		cellSet[cell.String()] = struct{}{}
+	}
+
+	// BBoxが小さくてセルが取得できない場合、4隅と中心のセルを追加
+	// これにより、BBoxがH3セルより小さい場合でも検索が機能する
+	if len(cellSet) == 0 {
+		cornerCells := c.calculateCornerCells(bbox, resolution)
+		for _, cellStr := range cornerCells {
+			cellSet[cellStr] = struct{}{}
+		}
+	}
+
+	// map -> slice変換
+	cellStrings := make([]string, 0, len(cellSet))
+	for cellStr := range cellSet {
+		cellStrings = append(cellStrings, cellStr)
 	}
 
 	return cellStrings, nil
+}
+
+// calculateCornerCells はBBoxの4隅と中心からH3セルを計算する
+func (c *BBoxCellCalculator) calculateCornerCells(bbox *entity.BoundingBox, resolution int) []string {
+	// 4隅 + 中心の5点
+	points := []h3.LatLng{
+		h3.NewLatLng(bbox.SwLat(), bbox.SwLng()),                                   // 南西
+		h3.NewLatLng(bbox.SwLat(), bbox.NeLng()),                                   // 南東
+		h3.NewLatLng(bbox.NeLat(), bbox.NeLng()),                                   // 北東
+		h3.NewLatLng(bbox.NeLat(), bbox.SwLng()),                                   // 北西
+		h3.NewLatLng((bbox.SwLat()+bbox.NeLat())/2, (bbox.SwLng()+bbox.NeLng())/2), // 中心
+	}
+
+	cellSet := make(map[string]struct{})
+	for _, point := range points {
+		cell, err := h3.LatLngToCell(point, resolution)
+		if err != nil {
+			continue
+		}
+		cellSet[cell.String()] = struct{}{}
+	}
+
+	cells := make([]string, 0, len(cellSet))
+	for cellStr := range cellSet {
+		cells = append(cells, cellStr)
+	}
+	return cells
 }
