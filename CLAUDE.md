@@ -157,10 +157,16 @@ Presentation → Application → Domain ← Infrastructure
 
 **粒度**: 1機能=1コミット / ファイル種別別 / 影響範囲別 / WIP禁止
 
+## OpenAPI仕様ルール
+
+- **example必須**: すべてのリクエストパラメータ、レスポンスフィールドに`example`を記載すること
+- **日本語description**: 各フィールドの説明は日本語で記載すること
+- **現実的な値**: exampleには実際のユースケースに即した現実的な値を使用すること
+
 ## 開発ワークフロー（新機能追加）
 
 **手順**:
-1. **API仕様**: `api/openapi.yaml`定義 → `make api-validate` → `make api-generate`
+1. **API仕様**: `api/openapi.yaml`定義(example必須) → `make api-validate` → `make api-generate`
 2. **パッケージ作成**: `mkdir -p features/<name>/{application/{query,usecase},domain/{entity,repository},infrastructure/{query,repository},presentation}`
 3. **実装**: Domain(Entity+RepoIF) → Application(QueryIF+Usecase) → Infrastructure(Query/Repo実装) → Presentation(ServerIF)
 4. **テスト**: 各レイヤーで`*_test.go`（単体）/`*_integration_test.go`(統合)作成

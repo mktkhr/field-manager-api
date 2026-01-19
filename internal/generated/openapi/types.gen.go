@@ -118,6 +118,18 @@ type FieldResponse struct {
 	Errors *[]Error `json:"errors"`
 }
 
+// FieldSearchData defines model for FieldSearchData.
+type FieldSearchData struct {
+	// Fields 検索結果の圃場リスト
+	Fields []SearchedField `json:"fields"`
+}
+
+// FieldSearchResponse defines model for FieldSearchResponse.
+type FieldSearchResponse struct {
+	Data   *FieldSearchData `json:"data"`
+	Errors *[]Error         `json:"errors"`
+}
+
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
 	Status string `json:"status"`
@@ -188,6 +200,37 @@ type RecalculateResponse struct {
 // ResponseMeta defines model for ResponseMeta.
 type ResponseMeta struct {
 	Pagination CursorPaginationMeta `json:"pagination"`
+}
+
+// SearchedCoordinate defines model for SearchedCoordinate.
+type SearchedCoordinate struct {
+	// Lat 緯度
+	Lat float64 `json:"lat"`
+
+	// Lng 経度
+	Lng float64 `json:"lng"`
+}
+
+// SearchedField defines model for SearchedField.
+type SearchedField struct {
+	// AreaSqm 面積(平方メートル)
+	AreaSqm  *float64           `json:"areaSqm"`
+	Centroid SearchedCoordinate `json:"centroid"`
+
+	// CityCode 市区町村コード
+	CityCode string `json:"cityCode"`
+
+	// Geometry ポリゴン頂点座標配列
+	Geometry []SearchedCoordinate `json:"geometry"`
+
+	// Id 圃場ID
+	Id openapi_types.UUID `json:"id"`
+
+	// Name 圃場名
+	Name string `json:"name"`
+
+	// SoilTypeId 土壌タイプID
+	SoilTypeId *openapi_types.UUID `json:"soilTypeId"`
 }
 
 // Cursor defines model for Cursor.
@@ -263,6 +306,21 @@ type ListFieldsParams struct {
 
 	// PageSize 1ページあたりの件数
 	PageSize *PageSize `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
+// SearchFieldsParams defines parameters for SearchFields.
+type SearchFieldsParams struct {
+	// SwLat 南西端の緯度
+	SwLat SwLat `form:"sw_lat" json:"sw_lat"`
+
+	// SwLng 南西端の経度
+	SwLng SwLng `form:"sw_lng" json:"sw_lng"`
+
+	// NeLat 北東端の緯度
+	NeLat NeLat `form:"ne_lat" json:"ne_lat"`
+
+	// NeLng 北東端の経度
+	NeLng NeLng `form:"ne_lng" json:"ne_lng"`
 }
 
 // RequestImportJSONRequestBody defines body for RequestImport for application/json ContentType.
