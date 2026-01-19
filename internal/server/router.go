@@ -13,15 +13,20 @@ import (
 	fieldUsecase "github.com/mktkhr/field-manager-api/internal/features/field/application/usecase"
 	fieldQuery "github.com/mktkhr/field-manager-api/internal/features/field/infrastructure/query"
 	fieldHandler "github.com/mktkhr/field-manager-api/internal/features/field/presentation"
+	fieldsearchUsecase "github.com/mktkhr/field-manager-api/internal/features/fieldsearch/application/usecase"
+	fieldsearchH3util "github.com/mktkhr/field-manager-api/internal/features/fieldsearch/infrastructure/h3util"
+	fieldsearchQuery "github.com/mktkhr/field-manager-api/internal/features/fieldsearch/infrastructure/query"
+	fieldsearchHandler "github.com/mktkhr/field-manager-api/internal/features/fieldsearch/presentation"
 	"github.com/mktkhr/field-manager-api/internal/generated/openapi"
 	"github.com/mktkhr/field-manager-api/internal/infrastructure/cache"
 )
 
 // StrictServerHandler はStrictServerInterfaceを実装する
 type StrictServerHandler struct {
-	clusterHandler *clusterHandler.ClusterHandler
-	fieldHandler   *fieldHandler.FieldHandler
-	logger         *slog.Logger
+	clusterHandler     *clusterHandler.ClusterHandler
+	fieldHandler       *fieldHandler.FieldHandler
+	fieldsearchHandler *fieldsearchHandler.FieldSearchHandler
+	logger             *slog.Logger
 }
 
 // NewStrictServerHandler はStrictServerHandlerを作成する
@@ -54,10 +59,17 @@ func NewStrictServerHandler(
 	listFieldsUC := fieldUsecase.NewListFieldsUseCase(fieldQueryImpl, logger)
 	fieldHdlr := fieldHandler.NewFieldHandler(listFieldsUC, logger)
 
+	// 圃場検索機能のDI
+	fieldsearchQueryImpl := fieldsearchQuery.NewFieldSearchQuery(pool)
+	h3Calculator := fieldsearchH3util.NewBBoxCellCalculator()
+	searchFieldsUC := fieldsearchUsecase.NewSearchFieldsUseCase(fieldsearchQueryImpl, h3Calculator, logger)
+	fieldsearchHdlr := fieldsearchHandler.NewFieldSearchHandler(searchFieldsUC, logger)
+
 	return &StrictServerHandler{
-		clusterHandler: clusterHdlr,
-		fieldHandler:   fieldHdlr,
-		logger:         logger,
+		clusterHandler:     clusterHdlr,
+		fieldHandler:       fieldHdlr,
+		fieldsearchHandler: fieldsearchHdlr,
+		logger:             logger,
 	}
 }
 
@@ -74,6 +86,11 @@ func (h *StrictServerHandler) RecalculateClusters(ctx context.Context, request o
 // ListFields は圃場一覧取得エンドポイント
 func (h *StrictServerHandler) ListFields(ctx context.Context, request openapi.ListFieldsRequestObject) (openapi.ListFieldsResponseObject, error) {
 	return h.fieldHandler.ListFields(ctx, request)
+}
+
+// SearchFields は緯度経度範囲による圃場検索エンドポイント
+func (h *StrictServerHandler) SearchFields(ctx context.Context, request openapi.SearchFieldsRequestObject) (openapi.SearchFieldsResponseObject, error) {
+	return h.fieldsearchHandler.SearchFields(ctx, request)
 }
 
 // GetField は圃場詳細取得エンドポイント(未実装)
