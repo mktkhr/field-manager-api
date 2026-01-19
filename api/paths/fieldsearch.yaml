@@ -1,0 +1,28 @@
+# 圃場検索エンドポイント
+search:
+  get:
+    tags:
+      - fieldsearch
+    summary: 緯度経度範囲による圃場検索
+    description: |
+      BoundingBox(南西端/北東端座標)を指定して圃場を検索する。
+      H3インデックスによる事前絞り込みとPostGIS GISTによる精密フィルタの
+      ハイブリッドアプローチで高速な検索を実現。
+    operationId: searchFields
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/SwLat"
+      - $ref: "../components/parameters/common.yaml#/SwLng"
+      - $ref: "../components/parameters/common.yaml#/NeLat"
+      - $ref: "../components/parameters/common.yaml#/NeLng"
+    responses:
+      "200":
+        description: 検索結果
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/fieldsearch.yaml#/FieldSearchResponse"
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"

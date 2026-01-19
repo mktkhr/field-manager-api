@@ -16,6 +16,8 @@ tags:
     description: ヘルスチェック
   - name: fields
     description: 圃場管理
+  - name: fieldsearch
+    description: 圃場検索
   - name: imports
     description: wagriデータインポート
   - name: clusters
@@ -30,6 +32,8 @@ paths:
     $ref: "./paths/fields.yaml#/fields"
   /api/v1/fields/{fieldId}:
     $ref: "./paths/fields.yaml#/field"
+  /api/v1/fields/search:
+    $ref: "./paths/fieldsearch.yaml#/search"
   /api/v1/imports:
     $ref: "./paths/imports.yaml#/imports"
   /api/v1/imports/{importId}:

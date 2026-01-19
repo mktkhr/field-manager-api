@@ -25,6 +25,9 @@ type ServerInterface interface {
 	// 圃場一覧取得
 	// (GET /api/v1/fields)
 	ListFields(c *gin.Context, params ListFieldsParams)
+	// 緯度経度範囲による圃場検索
+	// (GET /api/v1/fields/search)
+	SearchFields(c *gin.Context, params SearchFieldsParams)
 	// 圃場詳細取得
 	// (GET /api/v1/fields/{fieldId})
 	GetField(c *gin.Context, fieldId FieldId)
@@ -188,6 +191,84 @@ func (siw *ServerInterfaceWrapper) ListFields(c *gin.Context) {
 	siw.Handler.ListFields(c, params)
 }
 
+// SearchFields operation middleware
+func (siw *ServerInterfaceWrapper) SearchFields(c *gin.Context) {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SearchFieldsParams
+
+	// ------------- Required query parameter "sw_lat" -------------
+
+	if paramValue := c.Query("sw_lat"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument sw_lat is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "sw_lat", c.Request.URL.Query(), &params.SwLat)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter sw_lat: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Required query parameter "sw_lng" -------------
+
+	if paramValue := c.Query("sw_lng"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument sw_lng is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "sw_lng", c.Request.URL.Query(), &params.SwLng)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter sw_lng: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Required query parameter "ne_lat" -------------
+
+	if paramValue := c.Query("ne_lat"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument ne_lat is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "ne_lat", c.Request.URL.Query(), &params.NeLat)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter ne_lat: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Required query parameter "ne_lng" -------------
+
+	if paramValue := c.Query("ne_lng"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument ne_lng is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "ne_lng", c.Request.URL.Query(), &params.NeLng)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter ne_lng: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.SearchFields(c, params)
+}
+
 // GetField operation middleware
 func (siw *ServerInterfaceWrapper) GetField(c *gin.Context) {
 
@@ -292,6 +373,7 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/api/v1/clusters", wrapper.GetClusters)
 	router.POST(options.BaseURL+"/api/v1/clusters/recalculate", wrapper.RecalculateClusters)
 	router.GET(options.BaseURL+"/api/v1/fields", wrapper.ListFields)
+	router.GET(options.BaseURL+"/api/v1/fields/search", wrapper.SearchFields)
 	router.GET(options.BaseURL+"/api/v1/fields/:fieldId", wrapper.GetField)
 	router.POST(options.BaseURL+"/api/v1/imports", wrapper.RequestImport)
 	router.GET(options.BaseURL+"/api/v1/imports/:importId", wrapper.GetImportStatus)
@@ -416,6 +498,43 @@ type ListFields500JSONResponse struct {
 }
 
 func (response ListFields500JSONResponse) VisitListFieldsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchFieldsRequestObject struct {
+	Params SearchFieldsParams
+}
+
+type SearchFieldsResponseObject interface {
+	VisitSearchFieldsResponse(w http.ResponseWriter) error
+}
+
+type SearchFields200JSONResponse FieldSearchResponse
+
+func (response SearchFields200JSONResponse) VisitSearchFieldsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchFields400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SearchFields400JSONResponse) VisitSearchFieldsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchFields500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response SearchFields500JSONResponse) VisitSearchFieldsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -613,6 +732,9 @@ type StrictServerInterface interface {
 	// 圃場一覧取得
 	// (GET /api/v1/fields)
 	ListFields(ctx context.Context, request ListFieldsRequestObject) (ListFieldsResponseObject, error)
+	// 緯度経度範囲による圃場検索
+	// (GET /api/v1/fields/search)
+	SearchFields(ctx context.Context, request SearchFieldsRequestObject) (SearchFieldsResponseObject, error)
 	// 圃場詳細取得
 	// (GET /api/v1/fields/{fieldId})
 	GetField(ctx context.Context, request GetFieldRequestObject) (GetFieldResponseObject, error)
@@ -711,6 +833,33 @@ func (sh *strictHandler) ListFields(ctx *gin.Context, params ListFieldsParams) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(ListFieldsResponseObject); ok {
 		if err := validResponse.VisitListFieldsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SearchFields operation middleware
+func (sh *strictHandler) SearchFields(ctx *gin.Context, params SearchFieldsParams) {
+	var request SearchFieldsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SearchFields(ctx, request.(SearchFieldsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SearchFields")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(SearchFieldsResponseObject); ok {
+		if err := validResponse.VisitSearchFieldsResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

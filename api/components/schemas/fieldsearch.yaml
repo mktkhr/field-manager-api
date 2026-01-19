@@ -1,0 +1,93 @@
+# 圃場検索関連スキーマ定義
+
+# 検索結果用座標オブジェクト
+SearchedCoordinate:
+  type: object
+  required:
+    - lat
+    - lng
+  properties:
+    lat:
+      type: number
+      format: double
+      description: 緯度
+      example: 35.6895
+    lng:
+      type: number
+      format: double
+      description: 経度
+      example: 139.6917
+
+# 検索結果用圃場オブジェクト
+SearchedField:
+  type: object
+  required:
+    - id
+    - name
+    - cityCode
+    - geometry
+    - centroid
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: 圃場ID
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    name:
+      type: string
+      description: 圃場名
+      example: "田んぼA"
+    cityCode:
+      type: string
+      description: 市区町村コード
+      example: "13101"
+    soilTypeId:
+      type: string
+      format: uuid
+      nullable: true
+      description: 土壌タイプID
+      example: "660e8400-e29b-41d4-a716-446655440001"
+    areaSqm:
+      type: number
+      format: double
+      nullable: true
+      description: 面積(平方メートル)
+      example: 1500.5
+    geometry:
+      type: array
+      items:
+        $ref: "./fieldsearch.yaml#/SearchedCoordinate"
+      description: ポリゴン頂点座標配列
+    centroid:
+      $ref: "./fieldsearch.yaml#/SearchedCoordinate"
+      description: 重心座標
+
+# 検索結果データ
+FieldSearchData:
+  type: object
+  required:
+    - fields
+  properties:
+    fields:
+      type: array
+      items:
+        $ref: "./fieldsearch.yaml#/SearchedField"
+      description: 検索結果の圃場リスト
+
+# 検索レスポンス
+FieldSearchResponse:
+  type: object
+  required:
+    - data
+    - errors
+  properties:
+    data:
+      type: object
+      allOf:
+        - $ref: "./fieldsearch.yaml#/FieldSearchData"
+      nullable: true
+    errors:
+      type: array
+      nullable: true
+      items:
+        $ref: "./common.yaml#/Error"
