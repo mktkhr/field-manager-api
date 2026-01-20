@@ -103,3 +103,34 @@ NeLng:
     format: double
     minimum: -180
     maximum: 180
+
+ManagerType:
+  name: managerType
+  in: path
+  required: true
+  description: 管理者タイプ
+  schema:
+    type: string
+    enum:
+      - organization
+      - user
+      - region
+    x-go-name: ManagerTypeParam
+
+ManagerId:
+  name: managerId
+  in: path
+  required: true
+  description: 管理者ID
+  schema:
+    type: string
+    format: uuid
+
+FieldManagerId:
+  name: fieldManagerId
+  in: path
+  required: true
+  description: 管理関係ID
+  schema:
+    type: string
+    format: uuid

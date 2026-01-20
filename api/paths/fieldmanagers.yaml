@@ -1,0 +1,101 @@
+# 圃場管理者エンドポイント
+fieldsManagers:
+  get:
+    tags:
+      - fieldmanagers
+    summary: 圃場の管理者一覧取得
+    description: 指定された圃場に紐づく管理者一覧を取得します
+    operationId: listManagersByField
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/FieldId"
+    responses:
+      "200":
+        description: 管理者一覧
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/fieldmanager.yaml#/FieldManagerListResponse"
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "404":
+        $ref: "../components/responses/errors.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+
+  post:
+    tags:
+      - fieldmanagers
+    summary: 管理者を割り当て
+    description: 指定された圃場に管理者を割り当てます
+    operationId: assignManager
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/FieldId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/fieldmanager.yaml#/AssignManagerRequest"
+    responses:
+      "201":
+        description: 割り当て成功
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/fieldmanager.yaml#/FieldManagerResponse"
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "404":
+        $ref: "../components/responses/errors.yaml#/NotFound"
+      "409":
+        $ref: "../components/responses/errors.yaml#/Conflict"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+
+fieldsManagersDetail:
+  delete:
+    tags:
+      - fieldmanagers
+    summary: 管理者を解除
+    description: 指定された圃場から管理者を解除します
+    operationId: unassignManager
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/FieldId"
+      - $ref: "../components/parameters/common.yaml#/FieldManagerId"
+    responses:
+      "204":
+        description: 解除成功
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "404":
+        $ref: "../components/responses/errors.yaml#/NotFound"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"
+
+managerFields:
+  get:
+    tags:
+      - fieldmanagers
+    summary: 管理配下の圃場一覧取得
+    description: 指定された管理者タイプ・管理者IDに紐づく圃場ID一覧を取得します
+    operationId: listFieldsByManager
+    security: []
+    parameters:
+      - $ref: "../components/parameters/common.yaml#/ManagerType"
+      - $ref: "../components/parameters/common.yaml#/ManagerId"
+      - $ref: "../components/parameters/common.yaml#/Cursor"
+      - $ref: "../components/parameters/common.yaml#/PageSize"
+    responses:
+      "200":
+        description: 圃場ID一覧
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/fieldmanager.yaml#/FieldIdListResponse"
+      "400":
+        $ref: "../components/responses/errors.yaml#/BadRequest"
+      "500":
+        $ref: "../components/responses/errors.yaml#/InternalServerError"

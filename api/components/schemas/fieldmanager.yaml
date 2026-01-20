@@ -1,0 +1,133 @@
+# 圃場管理者スキーマ定義
+ManagerType:
+  type: string
+  description: 管理者タイプ
+  enum:
+    - organization
+    - user
+    - region
+  example: organization
+  x-go-name: FieldManagerType
+
+FieldManager:
+  type: object
+  description: 圃場管理関係
+  required:
+    - id
+    - fieldId
+    - managerType
+    - managerId
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: 管理関係ID
+      example: "550e8400-e29b-41d4-a716-446655440001"
+    fieldId:
+      type: string
+      format: uuid
+      description: 圃場ID
+      example: "550e8400-e29b-41d4-a716-446655440002"
+    managerType:
+      $ref: "#/ManagerType"
+    managerId:
+      type: string
+      format: uuid
+      description: 管理者ID(組織ID/ユーザーID/地域IDなど)
+      example: "550e8400-e29b-41d4-a716-446655440003"
+    createdAt:
+      type: string
+      format: date-time
+      description: 作成日時
+      example: "2024-01-15T09:00:00Z"
+    createdBy:
+      type: string
+      format: uuid
+      description: 作成者UUID
+      example: "550e8400-e29b-41d4-a716-446655440004"
+
+FieldManagerListData:
+  type: object
+  description: 圃場管理者一覧データ
+  required:
+    - managers
+  properties:
+    managers:
+      type: array
+      items:
+        $ref: "#/FieldManager"
+    nextCursor:
+      type: string
+      description: 次ページ取得用カーソル
+      example: "eyJjcmVhdGVkQXQiOiIyMDI0LTAxLTEwVDA5OjAwOjAwWiIsImlkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIn0="
+
+FieldManagerListResponse:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      $ref: "#/FieldManagerListData"
+    errors:
+      type: array
+      items:
+        $ref: "common.yaml#/Error"
+
+FieldManagerResponse:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      $ref: "#/FieldManager"
+    errors:
+      type: array
+      items:
+        $ref: "common.yaml#/Error"
+
+AssignManagerRequest:
+  type: object
+  description: 管理者割り当てリクエスト
+  required:
+    - managerType
+    - managerId
+  properties:
+    managerType:
+      $ref: "#/ManagerType"
+    managerId:
+      type: string
+      format: uuid
+      description: 管理者ID(組織ID/ユーザーID/地域IDなど)
+      example: "550e8400-e29b-41d4-a716-446655440003"
+
+FieldIdListData:
+  type: object
+  description: 圃場ID一覧データ
+  required:
+    - fieldIds
+  properties:
+    fieldIds:
+      type: array
+      items:
+        type: string
+        format: uuid
+      example:
+        - "550e8400-e29b-41d4-a716-446655440001"
+        - "550e8400-e29b-41d4-a716-446655440002"
+    nextCursor:
+      type: string
+      description: 次ページ取得用カーソル
+      example: "eyJjcmVhdGVkQXQiOiIyMDI0LTAxLTEwVDA5OjAwOjAwWiIsImlkIjoiNTUwZTg0MDAtZTI5Yi00MWQ0LWE3MTYtNDQ2NjU1NDQwMDAwIn0="
+
+FieldIdListResponse:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      $ref: "#/FieldIdListData"
+    errors:
+      type: array
+      items:
+        $ref: "common.yaml#/Error"

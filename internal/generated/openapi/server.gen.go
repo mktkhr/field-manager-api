@@ -31,12 +31,24 @@ type ServerInterface interface {
 	// 圃場詳細取得
 	// (GET /api/v1/fields/{fieldId})
 	GetField(c *gin.Context, fieldId FieldId)
+	// 圃場の管理者一覧取得
+	// (GET /api/v1/fields/{fieldId}/managers)
+	ListManagersByField(c *gin.Context, fieldId FieldId)
+	// 管理者を割り当て
+	// (POST /api/v1/fields/{fieldId}/managers)
+	AssignManager(c *gin.Context, fieldId FieldId)
+	// 管理者を解除
+	// (DELETE /api/v1/fields/{fieldId}/managers/{fieldManagerId})
+	UnassignManager(c *gin.Context, fieldId FieldId, fieldManagerId FieldManagerId)
 	// インポートリクエスト
 	// (POST /api/v1/imports)
 	RequestImport(c *gin.Context)
 	// インポートステータス取得
 	// (GET /api/v1/imports/{importId})
 	GetImportStatus(c *gin.Context, importId ImportId)
+	// 管理配下の圃場一覧取得
+	// (GET /api/v1/managers/{managerType}/{managerId}/fields)
+	ListFieldsByManager(c *gin.Context, managerType ListFieldsByManagerParamsManagerType, managerId ManagerId, params ListFieldsByManagerParams)
 	// ヘルスチェック
 	// (GET /health)
 	HealthCheck(c *gin.Context)
@@ -293,6 +305,87 @@ func (siw *ServerInterfaceWrapper) GetField(c *gin.Context) {
 	siw.Handler.GetField(c, fieldId)
 }
 
+// ListManagersByField operation middleware
+func (siw *ServerInterfaceWrapper) ListManagersByField(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "fieldId" -------------
+	var fieldId FieldId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "fieldId", c.Param("fieldId"), &fieldId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter fieldId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListManagersByField(c, fieldId)
+}
+
+// AssignManager operation middleware
+func (siw *ServerInterfaceWrapper) AssignManager(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "fieldId" -------------
+	var fieldId FieldId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "fieldId", c.Param("fieldId"), &fieldId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter fieldId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.AssignManager(c, fieldId)
+}
+
+// UnassignManager operation middleware
+func (siw *ServerInterfaceWrapper) UnassignManager(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "fieldId" -------------
+	var fieldId FieldId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "fieldId", c.Param("fieldId"), &fieldId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter fieldId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "fieldManagerId" -------------
+	var fieldManagerId FieldManagerId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "fieldManagerId", c.Param("fieldManagerId"), &fieldManagerId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter fieldManagerId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.UnassignManager(c, fieldId, fieldManagerId)
+}
+
 // RequestImport operation middleware
 func (siw *ServerInterfaceWrapper) RequestImport(c *gin.Context) {
 
@@ -328,6 +421,58 @@ func (siw *ServerInterfaceWrapper) GetImportStatus(c *gin.Context) {
 	}
 
 	siw.Handler.GetImportStatus(c, importId)
+}
+
+// ListFieldsByManager operation middleware
+func (siw *ServerInterfaceWrapper) ListFieldsByManager(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "managerType" -------------
+	var managerType ListFieldsByManagerParamsManagerType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "managerType", c.Param("managerType"), &managerType, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter managerType: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "managerId" -------------
+	var managerId ManagerId
+
+	err = runtime.BindStyledParameterWithOptions("simple", "managerId", c.Param("managerId"), &managerId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter managerId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListFieldsByManagerParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "cursor", c.Request.URL.Query(), &params.Cursor)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter cursor: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "pageSize", c.Request.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter pageSize: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ListFieldsByManager(c, managerType, managerId, params)
 }
 
 // HealthCheck operation middleware
@@ -375,8 +520,12 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/api/v1/fields", wrapper.ListFields)
 	router.GET(options.BaseURL+"/api/v1/fields/search", wrapper.SearchFields)
 	router.GET(options.BaseURL+"/api/v1/fields/:fieldId", wrapper.GetField)
+	router.GET(options.BaseURL+"/api/v1/fields/:fieldId/managers", wrapper.ListManagersByField)
+	router.POST(options.BaseURL+"/api/v1/fields/:fieldId/managers", wrapper.AssignManager)
+	router.DELETE(options.BaseURL+"/api/v1/fields/:fieldId/managers/:fieldManagerId", wrapper.UnassignManager)
 	router.POST(options.BaseURL+"/api/v1/imports", wrapper.RequestImport)
 	router.GET(options.BaseURL+"/api/v1/imports/:importId", wrapper.GetImportStatus)
+	router.GET(options.BaseURL+"/api/v1/managers/:managerType/:managerId/fields", wrapper.ListFieldsByManager)
 	router.GET(options.BaseURL+"/health", wrapper.HealthCheck)
 }
 
@@ -587,6 +736,154 @@ func (response GetField501JSONResponse) VisitGetFieldResponse(w http.ResponseWri
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListManagersByFieldRequestObject struct {
+	FieldId FieldId `json:"fieldId"`
+}
+
+type ListManagersByFieldResponseObject interface {
+	VisitListManagersByFieldResponse(w http.ResponseWriter) error
+}
+
+type ListManagersByField200JSONResponse FieldManagerListResponse
+
+func (response ListManagersByField200JSONResponse) VisitListManagersByFieldResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListManagersByField400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListManagersByField400JSONResponse) VisitListManagersByFieldResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListManagersByField404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListManagersByField404JSONResponse) VisitListManagersByFieldResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListManagersByField500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListManagersByField500JSONResponse) VisitListManagersByFieldResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AssignManagerRequestObject struct {
+	FieldId FieldId `json:"fieldId"`
+	Body    *AssignManagerJSONRequestBody
+}
+
+type AssignManagerResponseObject interface {
+	VisitAssignManagerResponse(w http.ResponseWriter) error
+}
+
+type AssignManager201JSONResponse FieldManagerResponse
+
+func (response AssignManager201JSONResponse) VisitAssignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AssignManager400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AssignManager400JSONResponse) VisitAssignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AssignManager404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AssignManager404JSONResponse) VisitAssignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AssignManager409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AssignManager409JSONResponse) VisitAssignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AssignManager500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response AssignManager500JSONResponse) VisitAssignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnassignManagerRequestObject struct {
+	FieldId        FieldId        `json:"fieldId"`
+	FieldManagerId FieldManagerId `json:"fieldManagerId"`
+}
+
+type UnassignManagerResponseObject interface {
+	VisitUnassignManagerResponse(w http.ResponseWriter) error
+}
+
+type UnassignManager204Response struct {
+}
+
+func (response UnassignManager204Response) VisitUnassignManagerResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type UnassignManager400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UnassignManager400JSONResponse) VisitUnassignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnassignManager404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UnassignManager404JSONResponse) VisitUnassignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UnassignManager500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response UnassignManager500JSONResponse) VisitUnassignManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type RequestImportRequestObject struct {
 	Body *RequestImportJSONRequestBody
 }
@@ -687,6 +984,45 @@ func (response GetImportStatus501JSONResponse) VisitGetImportStatusResponse(w ht
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListFieldsByManagerRequestObject struct {
+	ManagerType ListFieldsByManagerParamsManagerType `json:"managerType"`
+	ManagerId   ManagerId                            `json:"managerId"`
+	Params      ListFieldsByManagerParams
+}
+
+type ListFieldsByManagerResponseObject interface {
+	VisitListFieldsByManagerResponse(w http.ResponseWriter) error
+}
+
+type ListFieldsByManager200JSONResponse FieldIdListResponse
+
+func (response ListFieldsByManager200JSONResponse) VisitListFieldsByManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListFieldsByManager400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListFieldsByManager400JSONResponse) VisitListFieldsByManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListFieldsByManager500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListFieldsByManager500JSONResponse) VisitListFieldsByManagerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type HealthCheckRequestObject struct {
 }
 
@@ -738,12 +1074,24 @@ type StrictServerInterface interface {
 	// 圃場詳細取得
 	// (GET /api/v1/fields/{fieldId})
 	GetField(ctx context.Context, request GetFieldRequestObject) (GetFieldResponseObject, error)
+	// 圃場の管理者一覧取得
+	// (GET /api/v1/fields/{fieldId}/managers)
+	ListManagersByField(ctx context.Context, request ListManagersByFieldRequestObject) (ListManagersByFieldResponseObject, error)
+	// 管理者を割り当て
+	// (POST /api/v1/fields/{fieldId}/managers)
+	AssignManager(ctx context.Context, request AssignManagerRequestObject) (AssignManagerResponseObject, error)
+	// 管理者を解除
+	// (DELETE /api/v1/fields/{fieldId}/managers/{fieldManagerId})
+	UnassignManager(ctx context.Context, request UnassignManagerRequestObject) (UnassignManagerResponseObject, error)
 	// インポートリクエスト
 	// (POST /api/v1/imports)
 	RequestImport(ctx context.Context, request RequestImportRequestObject) (RequestImportResponseObject, error)
 	// インポートステータス取得
 	// (GET /api/v1/imports/{importId})
 	GetImportStatus(ctx context.Context, request GetImportStatusRequestObject) (GetImportStatusResponseObject, error)
+	// 管理配下の圃場一覧取得
+	// (GET /api/v1/managers/{managerType}/{managerId}/fields)
+	ListFieldsByManager(ctx context.Context, request ListFieldsByManagerRequestObject) (ListFieldsByManagerResponseObject, error)
 	// ヘルスチェック
 	// (GET /health)
 	HealthCheck(ctx context.Context, request HealthCheckRequestObject) (HealthCheckResponseObject, error)
@@ -894,6 +1242,96 @@ func (sh *strictHandler) GetField(ctx *gin.Context, fieldId FieldId) {
 	}
 }
 
+// ListManagersByField operation middleware
+func (sh *strictHandler) ListManagersByField(ctx *gin.Context, fieldId FieldId) {
+	var request ListManagersByFieldRequestObject
+
+	request.FieldId = fieldId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListManagersByField(ctx, request.(ListManagersByFieldRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListManagersByField")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(ListManagersByFieldResponseObject); ok {
+		if err := validResponse.VisitListManagersByFieldResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AssignManager operation middleware
+func (sh *strictHandler) AssignManager(ctx *gin.Context, fieldId FieldId) {
+	var request AssignManagerRequestObject
+
+	request.FieldId = fieldId
+
+	var body AssignManagerJSONRequestBody
+	if err := ctx.ShouldBindJSON(&body); err != nil {
+		ctx.Status(http.StatusBadRequest)
+		ctx.Error(err)
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.AssignManager(ctx, request.(AssignManagerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AssignManager")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(AssignManagerResponseObject); ok {
+		if err := validResponse.VisitAssignManagerResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UnassignManager operation middleware
+func (sh *strictHandler) UnassignManager(ctx *gin.Context, fieldId FieldId, fieldManagerId FieldManagerId) {
+	var request UnassignManagerRequestObject
+
+	request.FieldId = fieldId
+	request.FieldManagerId = fieldManagerId
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UnassignManager(ctx, request.(UnassignManagerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UnassignManager")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(UnassignManagerResponseObject); ok {
+		if err := validResponse.VisitUnassignManagerResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // RequestImport operation middleware
 func (sh *strictHandler) RequestImport(ctx *gin.Context) {
 	var request RequestImportRequestObject
@@ -947,6 +1385,35 @@ func (sh *strictHandler) GetImportStatus(ctx *gin.Context, importId ImportId) {
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(GetImportStatusResponseObject); ok {
 		if err := validResponse.VisitGetImportStatusResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListFieldsByManager operation middleware
+func (sh *strictHandler) ListFieldsByManager(ctx *gin.Context, managerType ListFieldsByManagerParamsManagerType, managerId ManagerId, params ListFieldsByManagerParams) {
+	var request ListFieldsByManagerRequestObject
+
+	request.ManagerType = managerType
+	request.ManagerId = managerId
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListFieldsByManager(ctx, request.(ListFieldsByManagerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFieldsByManager")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(ListFieldsByManagerResponseObject); ok {
+		if err := validResponse.VisitListFieldsByManagerResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

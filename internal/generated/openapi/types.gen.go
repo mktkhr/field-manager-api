@@ -18,6 +18,36 @@ const (
 	Processing         ImportStatusDataStatus = "processing"
 )
 
+// Defines values for FieldManagerType.
+const (
+	FieldManagerTypeOrganization FieldManagerType = "organization"
+	FieldManagerTypeRegion       FieldManagerType = "region"
+	FieldManagerTypeUser         FieldManagerType = "user"
+)
+
+// Defines values for ManagerType.
+const (
+	ManagerTypeOrganization ManagerType = "organization"
+	ManagerTypeRegion       ManagerType = "region"
+	ManagerTypeUser         ManagerType = "user"
+)
+
+// Defines values for ListFieldsByManagerParamsManagerType.
+const (
+	Organization ListFieldsByManagerParamsManagerType = "organization"
+	Region       ListFieldsByManagerParamsManagerType = "region"
+	User         ListFieldsByManagerParamsManagerType = "user"
+)
+
+// AssignManagerRequest 管理者割り当てリクエスト
+type AssignManagerRequest struct {
+	// ManagerId 管理者ID(組織ID/ユーザーID/地域IDなど)
+	ManagerId openapi_types.UUID `json:"managerId"`
+
+	// FieldManagerType 管理者タイプ
+	FieldManagerType FieldManagerType `json:"managerType"`
+}
+
 // Cluster defines model for Cluster.
 type Cluster struct {
 	// Count クラスターに含まれる圃場数
@@ -100,6 +130,21 @@ type Field struct {
 	SoilTypeId *openapi_types.UUID `json:"soilTypeId"`
 }
 
+// FieldIdListData 圃場ID一覧データ
+type FieldIdListData struct {
+	FieldIds []openapi_types.UUID `json:"fieldIds"`
+
+	// NextCursor 次ページ取得用カーソル
+	NextCursor *string `json:"nextCursor,omitempty"`
+}
+
+// FieldIdListResponse defines model for FieldIdListResponse.
+type FieldIdListResponse struct {
+	// Data 圃場ID一覧データ
+	Data   FieldIdListData `json:"data"`
+	Errors *[]Error        `json:"errors,omitempty"`
+}
+
 // FieldListData defines model for FieldListData.
 type FieldListData struct {
 	Fields []Field `json:"fields"`
@@ -110,6 +155,49 @@ type FieldListResponse struct {
 	Data   *FieldListData `json:"data"`
 	Errors *[]Error       `json:"errors"`
 	Meta   *ResponseMeta  `json:"meta"`
+}
+
+// FieldManager 圃場管理関係
+type FieldManager struct {
+	// CreatedAt 作成日時
+	CreatedAt time.Time `json:"createdAt"`
+
+	// CreatedBy 作成者UUID
+	CreatedBy *openapi_types.UUID `json:"createdBy,omitempty"`
+
+	// FieldId 圃場ID
+	FieldId openapi_types.UUID `json:"fieldId"`
+
+	// Id 管理関係ID
+	Id openapi_types.UUID `json:"id"`
+
+	// ManagerId 管理者ID(組織ID/ユーザーID/地域IDなど)
+	ManagerId openapi_types.UUID `json:"managerId"`
+
+	// FieldManagerType 管理者タイプ
+	FieldManagerType FieldManagerType `json:"managerType"`
+}
+
+// FieldManagerListData 圃場管理者一覧データ
+type FieldManagerListData struct {
+	Managers []FieldManager `json:"managers"`
+
+	// NextCursor 次ページ取得用カーソル
+	NextCursor *string `json:"nextCursor,omitempty"`
+}
+
+// FieldManagerListResponse defines model for FieldManagerListResponse.
+type FieldManagerListResponse struct {
+	// Data 圃場管理者一覧データ
+	Data   FieldManagerListData `json:"data"`
+	Errors *[]Error             `json:"errors,omitempty"`
+}
+
+// FieldManagerResponse defines model for FieldManagerResponse.
+type FieldManagerResponse struct {
+	// Data 圃場管理関係
+	Data   FieldManager `json:"data"`
+	Errors *[]Error     `json:"errors,omitempty"`
 }
 
 // FieldResponse defines model for FieldResponse.
@@ -182,6 +270,9 @@ type ImportStatusResponse struct {
 	Errors *[]Error          `json:"errors"`
 }
 
+// FieldManagerType 管理者タイプ
+type FieldManagerType string
+
 // RecalculateData defines model for RecalculateData.
 type RecalculateData struct {
 	// Enqueued ジョブがエンキューされたかどうか
@@ -239,8 +330,17 @@ type Cursor = string
 // FieldId defines model for FieldId.
 type FieldId = openapi_types.UUID
 
+// FieldManagerId defines model for FieldManagerId.
+type FieldManagerId = openapi_types.UUID
+
 // ImportId defines model for ImportId.
 type ImportId = openapi_types.UUID
+
+// ManagerId defines model for ManagerId.
+type ManagerId = openapi_types.UUID
+
+// ManagerType defines model for ManagerType.
+type ManagerType string
 
 // NeLat defines model for NeLat.
 type NeLat = float64
@@ -322,6 +422,21 @@ type SearchFieldsParams struct {
 	// NeLng 北東端の経度
 	NeLng NeLng `form:"ne_lng" json:"ne_lng"`
 }
+
+// ListFieldsByManagerParams defines parameters for ListFieldsByManager.
+type ListFieldsByManagerParams struct {
+	// Cursor 次ページ取得用カーソル(Base64エンコード)。省略時は先頭から取得
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// PageSize 1ページあたりの件数
+	PageSize *PageSize `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
+// ListFieldsByManagerParamsManagerType defines parameters for ListFieldsByManager.
+type ListFieldsByManagerParamsManagerType string
+
+// AssignManagerJSONRequestBody defines body for AssignManager for application/json ContentType.
+type AssignManagerJSONRequestBody = AssignManagerRequest
 
 // RequestImportJSONRequestBody defines body for RequestImport for application/json ContentType.
 type RequestImportJSONRequestBody = ImportRequest

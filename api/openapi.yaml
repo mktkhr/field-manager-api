@@ -18,6 +18,8 @@ tags:
     description: 圃場管理
   - name: fieldsearch
     description: 圃場検索
+  - name: fieldmanagers
+    description: 圃場管理者
   - name: imports
     description: wagriデータインポート
   - name: clusters
@@ -38,6 +40,12 @@ paths:
     $ref: "./paths/imports.yaml#/imports"
   /api/v1/imports/{importId}:
     $ref: "./paths/imports.yaml#/import"
+  /api/v1/fields/{fieldId}/managers:
+    $ref: "./paths/fieldmanagers.yaml#/fieldsManagers"
+  /api/v1/fields/{fieldId}/managers/{fieldManagerId}:
+    $ref: "./paths/fieldmanagers.yaml#/fieldsManagersDetail"
+  /api/v1/managers/{managerType}/{managerId}/fields:
+    $ref: "./paths/fieldmanagers.yaml#/managerFields"
   /api/v1/clusters:
     $ref: "./paths/clusters.yaml#/clusters"
   /api/v1/clusters/recalculate:
