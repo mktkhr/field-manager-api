@@ -164,19 +164,20 @@ func (s *SearchFieldsUseCaseTestSuite) TestSearchFieldsUseCase_Execute_Success_E
 }
 
 // TestSearchFieldsUseCase_Execute_Success_LargeArea は大きな検索範囲でresolution=5が選択されることをテスト
+// 注: 面積制限(1000km²)内に収まる範囲で対角線30km以上(resolution=5)をテスト
 func (s *SearchFieldsUseCaseTestSuite) TestSearchFieldsUseCase_Execute_Success_LargeArea() {
 	ctx := context.Background()
 	h3Cells := []string{"852f1a6ddffffff", "852f1a6ddffffff"}
 
-	// 対角線約100km(resolution=5が選択される)
+	// 対角線約42km(面積約900km²)でresolution=5が選択される
 	s.mockCalculator.On("CalculateCells", mock.Anything, 5).Return(h3Cells, nil)
 	s.mockQuery.On("SearchByBBox", ctx, mock.Anything, h3Cells, 5).Return([]*entity.SearchedField{}, nil)
 
 	input := SearchFieldsInput{
 		SwLat: 35.0,
 		SwLng: 139.0,
-		NeLat: 36.0,
-		NeLng: 140.0,
+		NeLat: 35.27,
+		NeLng: 139.33,
 	}
 	output, err := s.useCase.Execute(ctx, input)
 
@@ -321,6 +322,63 @@ func (s *SearchFieldsUseCaseTestSuite) TestSearchFieldsUseCase_Execute_BusinessL
 	require.Error(s.T(), err, "エラーが返されませんでした")
 	require.Nil(s.T(), output, "出力がnilではありません")
 	require.Equal(s.T(), expectedErr, err, "エラーが期待値と一致しません")
+
+	s.mockCalculator.AssertExpectations(s.T())
+	s.mockQuery.AssertExpectations(s.T())
+}
+
+// TestSearchFieldsUseCase_Execute_ValidationError_H3CellsExceedsLimit はH3セル数が上限を超える場合にエラーを返すことをテスト
+func (s *SearchFieldsUseCaseTestSuite) TestSearchFieldsUseCase_Execute_ValidationError_H3CellsExceedsLimit() {
+	ctx := context.Background()
+
+	// 上限(100)を超えるセル数を生成
+	h3Cells := make([]string, entity.MaxH3Cells+1)
+	for i := range h3Cells {
+		h3Cells[i] = "872f1a6ddffffff"
+	}
+
+	s.mockCalculator.On("CalculateCells", mock.Anything, 9).Return(h3Cells, nil)
+
+	input := SearchFieldsInput{
+		SwLat: 35.6800,
+		SwLng: 139.7000,
+		NeLat: 35.6900,
+		NeLng: 139.7100,
+	}
+	output, err := s.useCase.Execute(ctx, input)
+
+	require.Error(s.T(), err, "H3セル数上限超過エラーが返されませんでした")
+	require.Nil(s.T(), output, "出力がnilではありません")
+	require.Contains(s.T(), err.Error(), "H3セル数が上限を超えています", "エラーメッセージが期待と異なります")
+	require.Contains(s.T(), err.Error(), "101", "セル数が含まれていません")
+	require.Contains(s.T(), err.Error(), "100", "上限値が含まれていません")
+
+	s.mockCalculator.AssertExpectations(s.T())
+}
+
+// TestSearchFieldsUseCase_Execute_BoundaryValue_H3CellsAtLimit はH3セル数がちょうど上限の場合に成功することをテスト
+func (s *SearchFieldsUseCaseTestSuite) TestSearchFieldsUseCase_Execute_BoundaryValue_H3CellsAtLimit() {
+	ctx := context.Background()
+
+	// ちょうど上限(100)のセル数
+	h3Cells := make([]string, entity.MaxH3Cells)
+	for i := range h3Cells {
+		h3Cells[i] = "872f1a6ddffffff"
+	}
+
+	s.mockCalculator.On("CalculateCells", mock.Anything, 9).Return(h3Cells, nil)
+	s.mockQuery.On("SearchByBBox", ctx, mock.Anything, h3Cells, 9).Return([]*entity.SearchedField{}, nil)
+
+	input := SearchFieldsInput{
+		SwLat: 35.6800,
+		SwLng: 139.7000,
+		NeLat: 35.6900,
+		NeLng: 139.7100,
+	}
+	output, err := s.useCase.Execute(ctx, input)
+
+	require.NoError(s.T(), err, "H3セル数が上限ちょうどの場合はエラーにならない")
+	require.NotNil(s.T(), output, "出力がnilです")
 
 	s.mockCalculator.AssertExpectations(s.T())
 	s.mockQuery.AssertExpectations(s.T())

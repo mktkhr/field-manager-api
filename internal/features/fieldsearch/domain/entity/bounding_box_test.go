@@ -125,10 +125,15 @@ func (s *BoundingBoxTestSuite) TestDiagonalDistanceKm_Success_SmallArea() {
 }
 
 // TestDiagonalDistanceKm_Success_LargeArea は大きな範囲で対角線距離が正しく計算されることをテストする
+// 注: 面積制限(1000km²)を超えるBBoxなので、内部構造体を直接作成してテスト
 func (s *BoundingBoxTestSuite) TestDiagonalDistanceKm_Success_LargeArea() {
-	// 日本全国規模(約1000km四方)
-	bbox, err := NewBoundingBox(31.0, 130.0, 45.0, 145.0)
-	require.NoError(s.T(), err)
+	// 日本全国規模(約1000km四方) - 面積チェックをバイパスしてテスト
+	bbox := &BoundingBox{
+		swLat: 31.0,
+		swLng: 130.0,
+		neLat: 45.0,
+		neLng: 145.0,
+	}
 
 	distance := bbox.DiagonalDistanceKm()
 	// 対角線距離は1000km以上になるはず
@@ -136,20 +141,30 @@ func (s *BoundingBoxTestSuite) TestDiagonalDistanceKm_Success_LargeArea() {
 }
 
 // TestOptimalH3Resolution_Success_VeryLargeArea は対角線300km超の範囲で解像度3が返されることをテストする
+// 注: 面積制限(1000km²)を超えるBBoxなので、内部構造体を直接作成してテスト
 func (s *BoundingBoxTestSuite) TestOptimalH3Resolution_Success_VeryLargeArea() {
-	// 対角線 > 300km
-	bbox, err := NewBoundingBox(33.0, 130.0, 40.0, 140.0)
-	require.NoError(s.T(), err)
+	// 対角線 > 300km - 面積チェックをバイパスしてテスト
+	bbox := &BoundingBox{
+		swLat: 33.0,
+		swLng: 130.0,
+		neLat: 40.0,
+		neLng: 140.0,
+	}
 
 	resolution := bbox.OptimalH3Resolution()
 	require.Equal(s.T(), 3, resolution, "対角線300km超の場合は解像度3")
 }
 
 // TestOptimalH3Resolution_Success_LargeArea は対角線30-300kmの範囲で解像度5が返されることをテストする
+// 注: 面積制限(1000km²)を超えるBBoxなので、内部構造体を直接作成してテスト
 func (s *BoundingBoxTestSuite) TestOptimalH3Resolution_Success_LargeArea() {
-	// 対角線 30-300km(約100km程度)
-	bbox, err := NewBoundingBox(35.0, 139.0, 36.0, 140.0)
-	require.NoError(s.T(), err)
+	// 対角線 30-300km(約100km程度) - 面積チェックをバイパスしてテスト
+	bbox := &BoundingBox{
+		swLat: 35.0,
+		swLng: 139.0,
+		neLat: 36.0,
+		neLng: 140.0,
+	}
 
 	resolution := bbox.OptimalH3Resolution()
 	require.Equal(s.T(), 5, resolution, "対角線30-300kmの場合は解像度5")
@@ -173,4 +188,58 @@ func (s *BoundingBoxTestSuite) TestOptimalH3Resolution_Success_SmallArea() {
 
 	resolution := bbox.OptimalH3Resolution()
 	require.Equal(s.T(), 9, resolution, "対角線3km未満の場合は解像度9")
+}
+
+// TestAreaKm2_Success_SmallArea は小さな範囲で面積が正しく計算されることをテストする
+func (s *BoundingBoxTestSuite) TestAreaKm2_Success_SmallArea() {
+	// 約10km × 10km = 100km²程度の範囲
+	bbox, err := NewBoundingBox(35.6, 139.6, 35.7, 139.7)
+	require.NoError(s.T(), err)
+
+	area := bbox.AreaKm2()
+	// 約100km²程度になるはず(緯度の影響で多少ずれる)
+	require.Greater(s.T(), area, 80.0, "面積は80km²より大きいはず")
+	require.Less(s.T(), area, 120.0, "面積は120km²より小さいはず")
+}
+
+// TestAreaKm2_Success_MediumArea は中程度の範囲で面積が正しく計算されることをテストする
+func (s *BoundingBoxTestSuite) TestAreaKm2_Success_MediumArea() {
+	// 約30km × 30km = 900km²程度の範囲
+	bbox, err := NewBoundingBox(35.5, 139.5, 35.8, 139.8)
+	require.NoError(s.T(), err)
+
+	area := bbox.AreaKm2()
+	// 約900km²程度になるはず
+	require.Greater(s.T(), area, 700.0, "面積は700km²より大きいはず")
+	require.Less(s.T(), area, 1100.0, "面積は1100km²より小さいはず")
+}
+
+// TestNewBoundingBox_ValidationError_AreaExceedsLimit はBBox面積が上限を超える場合にエラーを返すことをテストする
+func (s *BoundingBoxTestSuite) TestNewBoundingBox_ValidationError_AreaExceedsLimit() {
+	// 約1500km²の範囲(約38km × 38km)
+	_, err := NewBoundingBox(35.0, 139.0, 35.35, 139.45)
+	require.Error(s.T(), err, "面積が1000km²を超える場合はエラーが必要")
+	require.Contains(s.T(), err.Error(), "面積")
+	require.Contains(s.T(), err.Error(), "上限")
+}
+
+// TestNewBoundingBox_BoundaryValue_AreaAtLimit はBBox面積が上限ちょうどの場合に成功することをテストする
+func (s *BoundingBoxTestSuite) TestNewBoundingBox_BoundaryValue_AreaAtLimit() {
+	// 約1000km²の範囲(約31.6km × 31.6km)
+	// 東京付近で1度≒111km×cos(35°)≒90.9km
+	// 0.3度 × 0.3度 ≈ 33.3km × 27.3km ≈ 909km²
+	bbox, err := NewBoundingBox(35.65, 139.65, 35.95, 139.98)
+	require.NoError(s.T(), err, "面積が上限ちょうどの場合はエラーにならない")
+	require.NotNil(s.T(), bbox)
+
+	area := bbox.AreaKm2()
+	require.LessOrEqual(s.T(), area, MaxBBoxAreaKm2, "面積は上限以下のはず")
+}
+
+// TestNewBoundingBox_BoundaryValue_AreaJustOverLimit はBBox面積が上限をわずかに超える場合にエラーを返すことをテストする
+func (s *BoundingBoxTestSuite) TestNewBoundingBox_BoundaryValue_AreaJustOverLimit() {
+	// 約1001km²以上の範囲
+	_, err := NewBoundingBox(35.0, 139.0, 35.35, 139.38)
+	require.Error(s.T(), err, "面積が上限を超える場合はエラーが必要")
+	require.Contains(s.T(), err.Error(), "面積")
 }

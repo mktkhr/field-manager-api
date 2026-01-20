@@ -58,9 +58,10 @@ func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_Success_MediumArea() {
 }
 
 // TestCalculateCells_Success_LargeArea は大きな範囲でH3セルが正しく計算されることをテスト
+// 注: 面積制限(1000km²)内に収まる範囲でテスト
 func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_Success_LargeArea() {
-	// 関東圏程度の範囲(約100km四方)
-	bbox, err := entity.NewBoundingBox(35.0, 139.0, 36.0, 140.0)
+	// 面積制限内の大きな範囲(約900km²、対角線約42km)
+	bbox, err := entity.NewBoundingBox(35.0, 139.0, 35.27, 139.33)
 	require.NoError(s.T(), err, "BoundingBox作成に失敗")
 
 	// resolution=5で計算
@@ -70,20 +71,12 @@ func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_Success_LargeArea() {
 	require.NotEmpty(s.T(), cells, "H3セルが空です")
 }
 
-// TestCalculateCells_Success_Resolution3 は解像度3でH3セルが正しく計算されることをテスト
-func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_Success_Resolution3() {
-	// 広域(日本全国レベル)
-	bbox, err := entity.NewBoundingBox(33.0, 130.0, 40.0, 145.0)
-	require.NoError(s.T(), err, "BoundingBox作成に失敗")
-
-	// resolution=3で計算
-	cells, err := s.calculator.CalculateCells(bbox, 3)
-
-	require.NoError(s.T(), err, "H3セル計算でエラーが発生")
-	require.NotEmpty(s.T(), cells, "H3セルが空です")
-
-	// 解像度3は広い範囲をカバーするのでセル数は比較的少ないはず
-	require.Less(s.T(), len(cells), 500, "解像度3のH3セル数が多すぎます")
+// TestCalculateCells_ValidationError_LargeBBoxExceedsAreaLimit は面積制限を超えるBBoxでエラーが発生することをテスト
+func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_ValidationError_LargeBBoxExceedsAreaLimit() {
+	// 面積制限(1000km²)を超える範囲
+	_, err := entity.NewBoundingBox(33.0, 130.0, 40.0, 145.0)
+	require.Error(s.T(), err, "面積制限を超えるBBoxでエラーが発生すべき")
+	require.Contains(s.T(), err.Error(), "面積", "エラーメッセージに面積が含まれていません")
 }
 
 // TestCalculateCells_Success_CellsContainValidH3Index は返されたセルが有効なH3インデックス形式であることをテスト
@@ -133,17 +126,19 @@ func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_ValidationError_Invalid
 }
 
 // TestCalculateCells_BoundaryValue_Resolution0 は解像度0でも正常に動作することをテスト
+// 注: 解像度0は非常に広い範囲をカバーするが、面積制限内の小さなBBoxでテスト
 func (s *BBoxCellCalculatorTestSuite) TestCalculateCells_BoundaryValue_Resolution0() {
-	// 解像度0は非常に広い範囲をカバーするため、大きなBBoxを使用
-	bbox, err := entity.NewBoundingBox(-60.0, -180.0, 60.0, 180.0)
+	// 面積制限内の範囲で解像度0をテスト
+	bbox, err := entity.NewBoundingBox(35.6, 139.6, 35.8, 139.8)
 	require.NoError(s.T(), err, "BoundingBox作成に失敗")
 
 	cells, err := s.calculator.CalculateCells(bbox, 0)
 
 	require.NoError(s.T(), err, "解像度0でエラーが発生")
 	// 解像度0でも計算自体はエラーにならない
-	// 結果が空でも許容(ContainmentCenterの挙動による)
 	require.NotNil(s.T(), cells, "セルがnilです")
+	// 解像度0は非常に広い範囲をカバーするので、小さなBBoxでは1セルのみになる可能性が高い
+	require.LessOrEqual(s.T(), len(cells), 3, "解像度0でのセル数が多すぎます")
 }
 
 // TestCalculateCells_BoundaryValue_Resolution15 は解像度15でも正常に動作することをテスト
