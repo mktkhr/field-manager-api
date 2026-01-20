@@ -5,6 +5,16 @@ import (
 	"math"
 )
 
+const (
+	// MaxBBoxAreaKm2 はBBoxの最大面積(km²)
+	// 約31km × 31kmの範囲に相当
+	MaxBBoxAreaKm2 = 1000.0
+
+	// MaxH3Cells はH3セルの最大数
+	// これを超える場合はクエリ効率が低下するためエラーとする
+	MaxH3Cells = 100
+)
+
 // BoundingBox は検索範囲を表すValue Object
 type BoundingBox struct {
 	swLat float64
@@ -33,12 +43,20 @@ func NewBoundingBox(swLat, swLng, neLat, neLng float64) (*BoundingBox, error) {
 		return nil, fmt.Errorf("南西端の緯度(%f)は北東端の緯度(%f)より小さくなければなりません", swLat, neLat)
 	}
 
-	return &BoundingBox{
+	bbox := &BoundingBox{
 		swLat: swLat,
 		swLng: swLng,
 		neLat: neLat,
 		neLng: neLng,
-	}, nil
+	}
+
+	// 面積チェック
+	area := bbox.AreaKm2()
+	if area > MaxBBoxAreaKm2 {
+		return nil, fmt.Errorf("BBox面積が上限を超えています: %.2f km²(上限: %.0f km²)", area, MaxBBoxAreaKm2)
+	}
+
+	return bbox, nil
 }
 
 // SwLat は南西端の緯度を返す
@@ -76,6 +94,22 @@ func (b *BoundingBox) DiagonalDistanceKm() float64 {
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 
 	return earthRadiusKm * c
+}
+
+// AreaKm2 はBBoxの面積(km²)を概算する
+// 緯度による経度方向の縮小を考慮した平面近似
+func (b *BoundingBox) AreaKm2() float64 {
+	const kmPerDegree = 111.0 // 緯度1度 ≈ 111km
+
+	latDiff := b.neLat - b.swLat
+	lngDiff := b.neLng - b.swLng
+	avgLat := (b.neLat + b.swLat) / 2.0
+
+	latKm := latDiff * kmPerDegree
+	// 経度方向は緯度によって縮小(cos補正)
+	lngKm := lngDiff * kmPerDegree * math.Cos(avgLat*math.Pi/180.0)
+
+	return latKm * lngKm
 }
 
 // OptimalH3Resolution はBBoxサイズに基づいて最適なH3解像度を返す

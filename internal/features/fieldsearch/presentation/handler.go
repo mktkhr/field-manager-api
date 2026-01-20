@@ -126,6 +126,8 @@ func isValidationError(err error) bool {
 		"90",
 		"-180",
 		"180",
+		"面積",
+		"H3セル数",
 	}
 
 	for _, keyword := range validationKeywords {
