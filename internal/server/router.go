@@ -13,6 +13,9 @@ import (
 	fieldUsecase "github.com/mktkhr/field-manager-api/internal/features/field/application/usecase"
 	fieldQuery "github.com/mktkhr/field-manager-api/internal/features/field/infrastructure/query"
 	fieldHandler "github.com/mktkhr/field-manager-api/internal/features/field/presentation"
+	fieldmanagerUsecase "github.com/mktkhr/field-manager-api/internal/features/fieldmanager/application/usecase"
+	fieldmanagerRepo "github.com/mktkhr/field-manager-api/internal/features/fieldmanager/infrastructure/repository"
+	fieldmanagerHandler "github.com/mktkhr/field-manager-api/internal/features/fieldmanager/presentation"
 	fieldsearchUsecase "github.com/mktkhr/field-manager-api/internal/features/fieldsearch/application/usecase"
 	fieldsearchH3util "github.com/mktkhr/field-manager-api/internal/features/fieldsearch/infrastructure/h3util"
 	fieldsearchQuery "github.com/mktkhr/field-manager-api/internal/features/fieldsearch/infrastructure/query"
@@ -23,10 +26,11 @@ import (
 
 // StrictServerHandler はStrictServerInterfaceを実装する
 type StrictServerHandler struct {
-	clusterHandler     *clusterHandler.ClusterHandler
-	fieldHandler       *fieldHandler.FieldHandler
-	fieldsearchHandler *fieldsearchHandler.FieldSearchHandler
-	logger             *slog.Logger
+	clusterHandler      *clusterHandler.ClusterHandler
+	fieldHandler        *fieldHandler.FieldHandler
+	fieldmanagerHandler *fieldmanagerHandler.FieldManagerHandler
+	fieldsearchHandler  *fieldsearchHandler.FieldSearchHandler
+	logger              *slog.Logger
 }
 
 // NewStrictServerHandler はStrictServerHandlerを作成する
@@ -65,11 +69,27 @@ func NewStrictServerHandler(
 	searchFieldsUC := fieldsearchUsecase.NewSearchFieldsUseCase(fieldsearchQueryImpl, h3Calculator, logger)
 	fieldsearchHdlr := fieldsearchHandler.NewFieldSearchHandler(searchFieldsUC, logger)
 
+	// 圃場管理者機能のDI
+	fieldmanagerRepository := fieldmanagerRepo.NewFieldManagerRepository(pool, logger)
+	fieldExistsChecker := fieldmanagerRepo.NewFieldExistsChecker(pool)
+	assignManagerUC := fieldmanagerUsecase.NewAssignManagerUseCase(fieldmanagerRepository, fieldExistsChecker, logger)
+	unassignManagerUC := fieldmanagerUsecase.NewUnassignManagerUseCase(fieldmanagerRepository, logger)
+	listFieldsByManagerUC := fieldmanagerUsecase.NewListFieldsByManagerUseCase(fieldmanagerRepository, logger)
+	listManagersByFieldUC := fieldmanagerUsecase.NewListManagersByFieldUseCase(fieldmanagerRepository, fieldExistsChecker, logger)
+	fieldmanagerHdlr := fieldmanagerHandler.NewFieldManagerHandler(
+		assignManagerUC,
+		unassignManagerUC,
+		listFieldsByManagerUC,
+		listManagersByFieldUC,
+		logger,
+	)
+
 	return &StrictServerHandler{
-		clusterHandler:     clusterHdlr,
-		fieldHandler:       fieldHdlr,
-		fieldsearchHandler: fieldsearchHdlr,
-		logger:             logger,
+		clusterHandler:      clusterHdlr,
+		fieldHandler:        fieldHdlr,
+		fieldmanagerHandler: fieldmanagerHdlr,
+		fieldsearchHandler:  fieldsearchHdlr,
+		logger:              logger,
 	}
 }
 
@@ -91,6 +111,26 @@ func (h *StrictServerHandler) ListFields(ctx context.Context, request openapi.Li
 // SearchFields は緯度経度範囲による圃場検索エンドポイント
 func (h *StrictServerHandler) SearchFields(ctx context.Context, request openapi.SearchFieldsRequestObject) (openapi.SearchFieldsResponseObject, error) {
 	return h.fieldsearchHandler.SearchFields(ctx, request)
+}
+
+// ListManagersByField は圃場の管理者一覧取得エンドポイント
+func (h *StrictServerHandler) ListManagersByField(ctx context.Context, request openapi.ListManagersByFieldRequestObject) (openapi.ListManagersByFieldResponseObject, error) {
+	return h.fieldmanagerHandler.ListManagersByField(ctx, request)
+}
+
+// AssignManager は管理者割り当てエンドポイント
+func (h *StrictServerHandler) AssignManager(ctx context.Context, request openapi.AssignManagerRequestObject) (openapi.AssignManagerResponseObject, error) {
+	return h.fieldmanagerHandler.AssignManager(ctx, request)
+}
+
+// UnassignManager は管理者解除エンドポイント
+func (h *StrictServerHandler) UnassignManager(ctx context.Context, request openapi.UnassignManagerRequestObject) (openapi.UnassignManagerResponseObject, error) {
+	return h.fieldmanagerHandler.UnassignManager(ctx, request)
+}
+
+// ListFieldsByManager は管理配下の圃場一覧取得エンドポイント
+func (h *StrictServerHandler) ListFieldsByManager(ctx context.Context, request openapi.ListFieldsByManagerRequestObject) (openapi.ListFieldsByManagerResponseObject, error) {
+	return h.fieldmanagerHandler.ListFieldsByManager(ctx, request)
 }
 
 // GetField は圃場詳細取得エンドポイント(未実装)
