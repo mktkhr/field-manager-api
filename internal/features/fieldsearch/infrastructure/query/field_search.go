@@ -52,6 +52,11 @@ func (q *fieldSearchQuery) SearchByBBox(ctx context.Context, bbox *entity.Boundi
 	// クエリ実行
 	// Phase1: H3 B-Treeインデックスで候補絞り込み
 	// Phase2: centroid(POINT)でBBox判定
+	//
+	// FIXME: fieldsテーブルの件数が1億件規模になった場合、
+	// ANY()方式ではBitmap Index Scanの効率が低下する可能性がある。
+	// その場合はCTE+UNNEST方式への変更を検討すること。
+	// 検証結果(7,158件): ANY()=11.3ms, CTE+UNNEST=13.9ms
 	sql := fmt.Sprintf(`
 		SELECT
 			id,

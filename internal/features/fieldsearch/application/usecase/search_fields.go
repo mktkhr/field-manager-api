@@ -3,6 +3,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -90,6 +91,14 @@ func (u *SearchFieldsUseCase) Execute(ctx context.Context, input SearchFieldsInp
 			slog.String("error", err.Error()),
 			slog.Int("resolution", resolution))
 		return nil, err
+	}
+
+	// H3セル数上限チェック
+	if len(h3Cells) > entity.MaxH3Cells {
+		u.logger.Warn("H3セル数が上限を超えています",
+			slog.Int("cellCount", len(h3Cells)),
+			slog.Int("maxCells", entity.MaxH3Cells))
+		return nil, fmt.Errorf("H3セル数が上限を超えています: %d(上限: %d)", len(h3Cells), entity.MaxH3Cells)
 	}
 
 	u.logger.Debug("H3セル計算完了",
